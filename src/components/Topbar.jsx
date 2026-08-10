@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Topbar({ time, date }) {
+export default function Topbar({ time, date, user, onLogout }) {
   return (
     <div className="topbar">
       <div className="brand">
@@ -16,8 +16,13 @@ export default function Topbar({ time, date }) {
           <span>{date}</span>
         </div>
         <div className="user-chip">
-          <span className="user-dot"></span> admin
+          <span className="user-dot"></span> {user ? user.username : 'admin'}
         </div>
+        {onLogout && (
+          <button className="logout-btn" onClick={onLogout} title="Sign Out">
+            Logout ↵
+          </button>
+        )}
       </div>
     </div>
   );

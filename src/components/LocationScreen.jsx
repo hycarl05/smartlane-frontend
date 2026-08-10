@@ -16,6 +16,8 @@ export default function LocationScreen({
   onBack,
   time,
   date,
+  user,
+  onLogout,
   onUpdateLoc,
   onShowToast
 }) {
@@ -164,8 +166,13 @@ export default function LocationScreen({
             <span>{date}</span>
           </div>
           <div className="user-chip">
-            <span className="user-dot"></span> admin
+            <span className="user-dot"></span> {user ? user.username : 'admin'}
           </div>
+          {onLogout && (
+            <button className="logout-btn" onClick={onLogout} title="Sign Out">
+              Logout ↵
+            </button>
+          )}
         </div>
       </div>
 

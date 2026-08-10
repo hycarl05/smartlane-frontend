@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import LoginScreen from './components/LoginScreen';
 import OverviewScreen from './components/OverviewScreen';
 import LocationScreen from './components/LocationScreen';
 import { INITIAL_LOCATIONS } from './data';
 
 export default function App() {
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('smartlane_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
   const [locations, setLocations] = useState(INITIAL_LOCATIONS);
   const [screen, setScreen] = useState('overview'); // 'overview' | 'location'
   const [activeLocId, setActiveLocId] = useState(null);
@@ -53,6 +59,20 @@ export default function App() {
     }, 2200);
   };
 
+  const handleLogin = (userData) => {
+    setUser(userData);
+    localStorage.setItem('smartlane_user', JSON.stringify(userData));
+    triggerToast(`Welcome back, ${userData.name || userData.username}!`);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('smartlane_user');
+    setScreen('overview');
+    setActiveLocId(null);
+    triggerToast('Logged out successfully');
+  };
+
   const handleSelectLocation = (id, tab = 'overview') => {
     setActiveLocId(id);
     setActiveTab(tab);
@@ -70,6 +90,19 @@ export default function App() {
     );
   };
 
+  // If user is not authenticated, show LoginScreen
+  if (!user) {
+    return (
+      <div className="app-container">
+        <LoginScreen onLogin={handleLogin} />
+        <div id="toast" className={showToast ? 'show' : ''}>
+          <span className="dot"></span>
+          <span id="toastMsg">{toastMsg}</span>
+        </div>
+      </div>
+    );
+  }
+
   const activeLoc = locations.find(l => l.id === activeLocId);
 
   return (
@@ -80,6 +113,8 @@ export default function App() {
           onSelectLocation={handleSelectLocation}
           time={clockTime}
           date={clockDate}
+          user={user}
+          onLogout={handleLogout}
         />
       ) : (
         <LocationScreen
@@ -89,6 +124,8 @@ export default function App() {
           onBack={handleBackToOverview}
           time={clockTime}
           date={clockDate}
+          user={user}
+          onLogout={handleLogout}
           onUpdateLoc={handleUpdateLocation}
           onShowToast={triggerToast}
         />

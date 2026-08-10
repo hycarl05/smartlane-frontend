@@ -2,7 +2,7 @@ import React from 'react';
 import Topbar from './Topbar';
 import { fmtElapsed } from '../data';
 
-export default function OverviewScreen({ locations, onSelectLocation, time, date }) {
+export default function OverviewScreen({ locations, onSelectLocation, time, date, user, onLogout }) {
   const activeCount = locations.filter(l => l.status === 'active').length;
   const pendingCount = locations.filter(l => l.status === 'pending').length;
   const totalAlarms = locations.reduce((sum, l) => sum + l.alarms.length, 0);
@@ -22,7 +22,7 @@ export default function OverviewScreen({ locations, onSelectLocation, time, date
 
   return (
     <div className="screen active">
-      <Topbar time={time} date={date} />
+      <Topbar time={time} date={date} user={user} onLogout={onLogout} />
 
       <div className="overview-header">
         <div>
