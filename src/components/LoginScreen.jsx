@@ -34,7 +34,7 @@ export default function LoginScreen({ onLogin }) {
       <div className="login-image-side">
         <div className="login-image-overlay"></div>
         <img
-          src="/highway-hero.jpg"
+          src="/hero.jpg"
           alt="PLUS Smartlane Highway Traffic Control"
           className="login-bg-img"
         />

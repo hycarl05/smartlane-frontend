@@ -119,6 +119,8 @@ export default function App() {
       ) : (
         <LocationScreen
           loc={activeLoc}
+          locations={locations}
+          onSelectLocation={handleSelectLocation}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           onBack={handleBackToOverview}

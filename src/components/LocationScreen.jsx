@@ -12,6 +12,8 @@ import {
 
 export default function LocationScreen({
   loc,
+  locations = [],
+  onSelectLocation,
   activeTab,
   setActiveTab,
   onBack,
@@ -157,10 +159,26 @@ export default function LocationScreen({
     <div className="screen active" style={{ position: 'relative' }}>
       <div className="loc-topbar">
         <button className="back-btn" onClick={onBack}>← All Locations</button>
-        <div className="loc-crumb">
-          <span>SMARTLANE · </span>
-          <span>{loc.name}</span>
+        
+        <div className="loc-dropdown-wrap">
+          <span className="loc-label-prefix">LOCATION:</span>
+          <select
+            className="loc-select-dropdown"
+            value={loc.id}
+            onChange={(e) => {
+              if (onSelectLocation) {
+                onSelectLocation(e.target.value, activeTab);
+              }
+            }}
+          >
+            {locations.map(l => (
+              <option key={l.id} value={l.id}>
+                {l.name} ({l.direction})
+              </option>
+            ))}
+          </select>
         </div>
+
         <div className="topbar-right" style={{ marginLeft: 'auto' }}>
           <div className="clock">
             <b>{time}</b>

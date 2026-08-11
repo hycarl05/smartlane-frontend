@@ -234,12 +234,200 @@ button {
   border-radius: 50%;
 }
 
-.overview-body {
+.overview-body-full {
   flex: 1;
   display: flex;
-  gap: 16px;
-  padding: 14px 24px 20px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 10px 24px 20px;
+  overflow-y: auto;
   min-height: 0;
+}
+
+/* Stat Cards Row */
+.stat-cards-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.stat-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.stat-icon.icon-blue { background: var(--brand-dim); color: var(--brand); }
+.stat-icon.icon-green { background: var(--green-dim); color: var(--green); }
+.stat-icon.icon-amber { background: var(--amber-dim); color: var(--amber); }
+.stat-icon.icon-red { background: var(--red-dim); color: var(--red); }
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-num {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.stat-lbl {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* Alarms Banner Strip */
+.alarms-banner-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.alarm-banner-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s ease;
+}
+
+.alarm-banner-item:hover {
+  background: var(--card-hover);
+}
+
+.banner-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.banner-indicator.crit { background: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
+.banner-indicator.warn { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-dim); }
+
+.banner-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.banner-content b {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.banner-content span {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+/* Horizontal Location Rows List */
+.loc-rows-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.loc-row-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  transition: all .18s ease;
+  overflow: hidden;
+}
+
+.loc-row-card:hover {
+  background: var(--card-hover);
+  border-color: var(--line);
+  transform: translateY(-1px);
+}
+
+.loc-accent-stripe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+.loc-accent-stripe.is-active { background: var(--accent); }
+.loc-accent-stripe.is-pending { background: var(--amber); }
+.loc-accent-stripe.is-inactive { background: transparent; }
+
+.row-col-main {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex: 1.2;
+}
+
+.loc-name-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.row-road-glyph {
+  width: 140px;
+  height: 20px;
+}
+
+.row-road-glyph .track {
+  stroke: var(--line);
+  stroke-width: 3;
+}
+
+.row-road-glyph .flow {
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-dasharray: 6 6;
+  animation: flowbar 1.5s linear infinite;
+}
+
+.row-road-glyph .marker {
+  fill: var(--line);
+}
+.row-road-glyph .marker.on {
+  fill: var(--accent);
+}
+
+.row-col-metrics {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex: 1.5;
+}
+
+.row-col-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .loc-grid {
@@ -612,6 +800,46 @@ button {
 .back-btn:hover {
   background: var(--surface-2);
   color: var(--text);
+}
+
+.loc-dropdown-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loc-label-prefix {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  letter-spacing: 0.05em;
+}
+
+.loc-select-dropdown {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.loc-select-dropdown:hover {
+  background: var(--card-hover);
+  border-color: var(--brand);
+}
+
+.loc-select-dropdown option {
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 8px;
 }
 
 .loc-crumb {

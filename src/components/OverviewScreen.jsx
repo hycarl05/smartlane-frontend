@@ -29,24 +29,62 @@ export default function OverviewScreen({ locations, onSelectLocation, time, date
           <div className="overview-title">All Smartlane Locations</div>
           <div className="overview-sub">Select a location to open its live dashboard and controls</div>
         </div>
-        <div className="summary-chips">
-          <div className="chip">
-            <span className="swatch" style={{ background: 'var(--accent)' }}></span>
-            {activeCount} active
-          </div>
-          <div className="chip">
-            <span className="swatch" style={{ background: 'var(--amber)' }}></span>
-            {pendingCount} pending
-          </div>
-          <div className="chip">
-            <span className="swatch" style={{ background: totalAlarms ? 'var(--red)' : 'var(--green)' }}></span>
-            <b>{totalAlarms}</b> open alarms
-          </div>
-        </div>
       </div>
 
-      <div className="overview-body">
-        <div className="loc-grid">
+      <div className="overview-body-full">
+        {/* TOP STAT CARDS BAR */}
+        <div className="stat-cards-row">
+          <div className="stat-card">
+            <div className="stat-icon icon-blue">📊</div>
+            <div className="stat-info">
+              <span className="stat-num">{locations.length}</span>
+              <span className="stat-lbl">Total locations</span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon icon-green">▶</div>
+            <div className="stat-info">
+              <span className="stat-num">{activeCount}</span>
+              <span className="stat-lbl">Active now</span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon icon-amber">!</div>
+            <div className="stat-info">
+              <span className="stat-num">{pendingCount}</span>
+              <span className="stat-lbl">Needs attention</span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon icon-red">⚠️</div>
+            <div className="stat-info">
+              <span className="stat-num">{totalAlarms}</span>
+              <span className="stat-lbl">Open alarms</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ALARMS BANNER STRIP */}
+        {allAlarms.length > 0 && (
+          <div className="alarms-banner-strip">
+            {allAlarms.map((a, idx) => (
+              <div
+                key={idx}
+                className="alarm-banner-item"
+                onClick={() => onSelectLocation(a.locId, 'log')}
+              >
+                <span className={`banner-indicator ${a.sev === 'critical' ? 'crit' : 'warn'}`}></span>
+                <div className="banner-content">
+                  <b>{a.title}</b>
+                  <span>{a.loc} · {a.time}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* FULL-WIDTH HORIZONTAL LOCATION ROWS */}
+        <div className="loc-rows-list">
           {locations.map(loc => {
             const cnt = loc.alarms.length;
             const isActive = loc.status === 'active';
@@ -55,89 +93,71 @@ export default function OverviewScreen({ locations, onSelectLocation, time, date
             return (
               <div
                 key={loc.id}
-                className={`loc-card is-${loc.status}`}
+                className={`loc-row-card is-${loc.status}`}
                 onClick={() => onSelectLocation(loc.id)}
               >
-                <div className="loc-card-clickzone"></div>
-                <div className="loc-card-top">
-                  <div>
+                <div className={`loc-accent-stripe is-${loc.status}`}></div>
+
+                {/* LOC NAME & SCHEMATIC */}
+                <div className="row-col-main">
+                  <div className="loc-name-wrap">
                     <div className="loc-name">{loc.name}</div>
                     <div className="loc-dir">{loc.direction}</div>
                   </div>
-                  <div className={`status-pill ${loc.status}`}>
-                    <span className="dot"></span>
-                    {isActive ? `ACTIVE · P${loc.phase}` : isPending ? 'ATTENTION' : 'INACTIVE'}
-                  </div>
+                  <svg className="row-road-glyph" viewBox="0 0 160 20">
+                    <line className="track" x1="4" y1="10" x2="156" y2="10" />
+                    <line className="flow" x1="4" y1="10" x2="156" y2="10" />
+                    {[16, 48, 80, 112, 144].map(x => (
+                      <circle
+                        key={x}
+                        className={`marker ${isActive || isPending ? 'on' : ''}`}
+                        cx={x}
+                        cy="10"
+                        r="2.5"
+                      />
+                    ))}
+                  </svg>
                 </div>
 
-                <svg className="road-glyph" viewBox="0 0 220 34" preserveAspectRatio="none">
-                  <line className="track" x1="6" y1="17" x2="214" y2="17" />
-                  <line className="flow" x1="6" y1="17" x2="214" y2="17" />
-                  {[26, 66, 106, 146, 186].map(x => (
-                    <circle
-                      key={x}
-                      className={`marker ${isActive || isPending ? 'on' : ''}`}
-                      cx={x}
-                      cy="17"
-                      r="3"
-                    />
-                  ))}
-                </svg>
-
-                <div className="loc-meta-row">
+                {/* METRICS */}
+                <div className="row-col-metrics">
                   <div className="loc-meta">
-                    <div className="lbl">Level of Service</div>
+                    <div className="lbl">LEVEL OF SERVICE</div>
                     <div className={`val ${loc.los === 'A' || loc.los === 'B' ? 'good' : loc.los === 'C' || loc.los === 'D' ? 'warn' : 'crit'}`}>
                       {loc.los}
                     </div>
                   </div>
                   <div className="loc-meta">
-                    <div className="lbl">Traffic flow</div>
+                    <div className="lbl">TRAFFIC FLOW</div>
                     <div className="val">{loc.trafficFlow}</div>
                   </div>
                   <div className="loc-meta">
-                    <div className="lbl">{isActive ? 'Elapsed' : 'Next run'}</div>
+                    <div className="lbl">{isActive ? 'ELAPSED' : 'NEXT RUN'}</div>
                     <div className="val">{isActive ? fmtElapsed(loc.elapsedSeconds) : loc.nextRun}</div>
                   </div>
                 </div>
 
-                <div className="loc-card-bottom">
+                {/* STATUS & ACTIONS */}
+                <div className="row-col-actions">
+                  <div className={`status-pill ${loc.status}`}>
+                    <span className="dot"></span>
+                    {isActive ? `ACTIVE · P${loc.phase}` : isPending ? 'ATTENTION' : 'INACTIVE'}
+                  </div>
+
                   <div className={`alarm-tag ${cnt === 0 ? 'none' : ''}`}>
                     <b>{cnt}</b> {cnt === 1 ? 'alarm' : 'alarms'}
                   </div>
-                  <button className="open-btn" onClick={(e) => { e.stopPropagation(); onSelectLocation(loc.id); }}>
+
+                  <button
+                    className="open-btn"
+                    onClick={(e) => { e.stopPropagation(); onSelectLocation(loc.id); }}
+                  >
                     Open Dashboard →
                   </button>
                 </div>
               </div>
             );
           })}
-        </div>
-
-        <div className="alarm-dock">
-          <div className="dock-head">
-            <h3>CONSOLIDATED ALARMS</h3>
-            <span>{allAlarms.length} open</span>
-          </div>
-          <div className="dock-list">
-            {allAlarms.length === 0 ? (
-              <div className="dock-empty">No active alarms across any location.</div>
-            ) : (
-              allAlarms.map((a, idx) => (
-                <div
-                  key={idx}
-                  className="alarm-row"
-                  onClick={() => onSelectLocation(a.locId, 'log')}
-                >
-                  <div className={`alarm-sev ${a.sev === 'critical' ? 'crit' : 'warn'}`}></div>
-                  <div className="alarm-body">
-                    <div className="t1">{a.title}</div>
-                    <div className="t2">{a.loc} · {a.time}</div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
         </div>
       </div>
     </div>
