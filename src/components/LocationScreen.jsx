@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Topbar from './Topbar';
 import Schedule from './Schedule';
+import VmsEditor from './VmsEditor';
 import {
   fmtElapsed,
   SCHEDULE_ITEMS,
@@ -30,6 +31,15 @@ export default function LocationScreen({
   const [reportType, setReportType] = useState(0);
   const [reportPeriod, setReportPeriod] = useState('Weekly');
   const [logState, setLogState] = useState(LOG_ENTRIES);
+
+  // VMS Editor Modal State
+  const [showVmsEditor, setShowVmsEditor] = useState(false);
+  const [vmsModuleType, setVmsModuleType] = useState('vms'); // 'vms' | 'miniVms'
+
+  const handleOpenVmsEditor = (type = 'vms') => {
+    setVmsModuleType(type);
+    setShowVmsEditor(true);
+  };
 
   if (!loc) return null;
 
@@ -428,23 +438,116 @@ export default function LocationScreen({
                     <div className="count"><b>{loc.equipment.lcs[0]}</b> / {loc.equipment.lcs[1]}</div>
                   </div>
                   <div className="equip-row">
-                    <div className="name"><span className="sw good"></span>VMS Display Boards</div>
-                    <div className="count"><b>{loc.equipment.vms[0]}</b> / {loc.equipment.vms[1]}</div>
+                    <div className="name"><span className="sw good"></span>Entry/Exit VMS (Standard)</div>
+                    <div className="count"><b>{loc.equipment.vms ? loc.equipment.vms[0] : 2}</b> / {loc.equipment.vms ? loc.equipment.vms[1] : 2}</div>
+                  </div>
+                  <div className="equip-row">
+                    <div className="name"><span className="sw good"></span>Mini VMS (Intermediate)</div>
+                    <div className="count"><b>{loc.equipment.miniVms ? loc.equipment.miniVms[0] : 2}</b> / {loc.equipment.miniVms ? loc.equipment.miniVms[1] : 2}</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* BOTTOM ROW */}
+            {/* BOTTOM ROW: Dynamic Standard VMS & Mini VMS Display Modules */}
             <div className="bottom-row">
-              <div className="vms-boards-wrap">
-                {loc.vmsBoards.map((b, idx) => (
-                  <div key={idx} className="vms-board">
-                    <div className="vms-msg">{b.msg}</div>
-                    {b.msg2 && <div className="vms-msg small">{b.msg2}</div>}
-                    <div className="km-tag">{b.km}</div>
+              <div className="vms-modules-container">
+                {/* 1. ENTRY & EXIT VMS (Standard Panels) */}
+                <div className="vms-group-box">
+                  <div className="vms-group-title">
+                    <span>📡 Entry &amp; Exit VMS (Standard)</span>
+                    <button
+                      className="mini-edit-btn"
+                      onClick={() => handleOpenVmsEditor('vms')}
+                    >
+                      ✏️ Edit VMS Templates
+                    </button>
                   </div>
-                ))}
+                  <div className="vms-boards-wrap">
+                    {(loc.vms || []).map((b) => {
+                      let dynamicMsg = b.msg;
+                      let dynamicMsg2 = b.msg2;
+
+                      if (loc.phase === 1) {
+                        dynamicMsg = b.position === 'Entry' ? 'PERHATIAN: BERSEDIA' : 'PERHATIAN: BERSEDIA';
+                        dynamicMsg2 = b.position === 'Entry' ? 'SMARTLANE AKAN DIBUKA' : 'SMARTLANE AKAN DIBUKA';
+                      } else if (loc.phase === 2) {
+                        dynamicMsg = b.position === 'Entry' ? 'SMARTLANE BERMULA' : 'SMARTLANE TAMAT';
+                        dynamicMsg2 = b.position === 'Entry' ? 'GUNAKAN LORONG KECEMASAN' : 'MASUK KE LORONG UTAMA';
+                      } else if (loc.phase === 3) {
+                        dynamicMsg = b.position === 'Entry' ? 'SMARTLANE AKAN DITUTUP' : 'KOSONGKAN LORONG KECEMASAN';
+                        dynamicMsg2 = b.position === 'Entry' ? 'BERSEDIA MASUK LORONG UTAMA' : 'SEGERA MASUK LORONG UTAMA';
+                      } else {
+                        dynamicMsg = b.msg || 'SMARTLANE DITUTUP';
+                        dynamicMsg2 = b.msg2 || 'GUNA LORONG UTAMA SAHAJA';
+                      }
+
+                      return (
+                        <div
+                          key={b.id || b.km}
+                          className="vms-board standard-vms"
+                          onClick={() => handleOpenVmsEditor('vms')}
+                          title="Click to edit VMS message template"
+                        >
+                          <div className="vms-badge">{b.type}</div>
+                          <div className="vms-msg">{dynamicMsg}</div>
+                          <div className="vms-msg small">{dynamicMsg2}</div>
+                          <div className="vms-footer">
+                            <span className={`vms-health ${b.status ? b.status.toLowerCase() : 'good'}`}>● {b.status || 'Good'}</span>
+                            <span className="km-tag">{b.km}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. MINI VMS (Intermediate Panels) */}
+                <div className="vms-group-box">
+                  <div className="vms-group-title">
+                    <span>📱 Mini VMS (Intermediate)</span>
+                    <button
+                      className="mini-edit-btn"
+                      onClick={() => handleOpenVmsEditor('miniVms')}
+                    >
+                      ✏️ Edit Mini VMS Templates
+                    </button>
+                  </div>
+                  <div className="vms-boards-wrap">
+                    {(loc.miniVms || []).map((mb) => {
+                      let miniMsg = mb.msg;
+                      let miniMsg2 = mb.msg2;
+
+                      if (loc.phase === 2) {
+                        miniMsg = mb.msg;
+                        miniMsg2 = mb.msg2;
+                      } else if (loc.phase === 1 || loc.phase === 3) {
+                        miniMsg = 'PATUHI ARAHAN';
+                        miniMsg2 = 'PERHATIKAN ISYARAT LCS';
+                      } else {
+                        miniMsg = mb.msg || 'LORONG KECEMASAN';
+                        miniMsg2 = mb.msg2 || 'DITUTUP';
+                      }
+
+                      return (
+                        <div
+                          key={mb.id || mb.km}
+                          className="vms-board mini-vms"
+                          onClick={() => handleOpenVmsEditor('miniVms')}
+                          title="Click to edit Mini VMS message template"
+                        >
+                          <div className="vms-badge mini">Mini VMS</div>
+                          <div className="vms-msg">{miniMsg}</div>
+                          <div className="vms-msg small">{miniMsg2}</div>
+                          <div className="vms-footer">
+                            <span className={`vms-health ${mb.status ? mb.status.toLowerCase() : 'good'}`}>● {mb.status || 'Good'}</span>
+                            <span className="km-tag">{mb.km}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               <div className="cctv-strip">
@@ -634,6 +737,17 @@ export default function LocationScreen({
           </div>
         )}
       </div>
+
+      {/* VMS & MINI VMS MESSAGE TEMPLATE EDITOR MODAL */}
+      <VmsEditor
+        isOpen={showVmsEditor}
+        onClose={() => setShowVmsEditor(false)}
+        moduleType={vmsModuleType}
+        loc={loc}
+        locations={locations}
+        onUpdateLoc={onUpdateLoc}
+        onShowToast={onShowToast}
+      />
     </div>
   );
 }

@@ -15,7 +15,7 @@ export const INITIAL_LOCATIONS = [
     incidents: 0,
     thresholdArmed: true,
     nextRun: '—',
-    equipment: { cctv: [6, 7], avds: [5, 5], lcs: [6, 6], vms: [3, 3], miniVms: [2, 2] },
+    equipment: { cctv: [6, 7], avds: [5, 5], lcs: [6, 6], vms: [2, 2], miniVms: [3, 3] },
     gantries: [
       { km: 'KM1.95NB', type: 'CCTV', status: 'ok' },
       { km: 'ET1.72@STA', type: 'CCTV', status: 'ok' },
@@ -41,9 +41,16 @@ export const INITIAL_LOCATIONS = [
       { km: 'KM7.5NB', spd: 89, vol: 46, occ: 12 },
       { km: 'KM8.4NB', spd: 81, vol: 44, occ: 14 }
     ],
-    vmsBoards: [
-      { km: 'KM4.91NB', msg: 'HATI-HATI', msg2: 'KETIKA MEMANDU' },
-      { km: 'KM6.0NB', msg: 'JALUR KECEMASAN', msg2: 'DIBUKA SEMENTARA' }
+    // Standard Entry & Exit VMS (Buka / Tutup stretch)
+    vms: [
+      { id: 'vms-entry', type: 'Entry VMS (Buka)', km: 'KM3.5NB', position: 'Entry', status: 'Good', msg: 'SMARTLANE BERMULA', msg2: 'MULA GUNAKAN LORONG KECEMASAN' },
+      { id: 'vms-exit', type: 'Exit VMS (Tutup)', km: 'KM8.6NB', position: 'Exit', status: 'Good', msg: 'SMARTLANE TAMAT', msg2: 'MASUK KEMBALI KE LORONG UTAMA' }
+    ],
+    // Mini VMS along intermediate main body intervals
+    miniVms: [
+      { id: 'mvms-1', type: 'Mini VMS', km: 'KM4.91NB', position: 'Intermediate', status: 'Good', msg: 'HATI-HATI', msg2: 'KETIKA MEMANDU' },
+      { id: 'mvms-2', type: 'Mini VMS', km: 'KM6.0NB', position: 'Intermediate', status: 'Good', msg: 'JALUR KECEMASAN', msg2: 'DIBUKA SEMENTARA' },
+      { id: 'mvms-3', type: 'Mini VMS', km: 'KM7.2NB', position: 'Intermediate', status: 'Warning', msg: 'PATUHI HAD LAJU', msg2: '60 KM/J DI LORONG KECEMASAN' }
     ],
     cctv: ['KM1.95NB', 'ET1.72@STA', 'STA I/C', 'KM4.5SB', 'KM5.9NB', 'KM7.0NB'],
     alarms: [
@@ -66,7 +73,7 @@ export const INITIAL_LOCATIONS = [
     incidents: 0,
     thresholdArmed: true,
     nextRun: '10 Aug 2026, 22:00',
-    equipment: { cctv: [7, 7], avds: [5, 5], lcs: [6, 6], vms: [3, 3], miniVms: [2, 2] },
+    equipment: { cctv: [7, 7], avds: [5, 5], lcs: [6, 6], vms: [2, 2], miniVms: [2, 2] },
     gantries: [
       { km: 'KM22.0NB', type: 'CCTV', status: 'ok' },
       { km: 'KM22.9NB', type: 'CCTV', status: 'ok' },
@@ -92,9 +99,13 @@ export const INITIAL_LOCATIONS = [
       { km: 'KM27.3NB', spd: 100, vol: 18, occ: 4 },
       { km: 'KM28.4NB', spd: 96, vol: 22, occ: 5 }
     ],
-    vmsBoards: [
-      { km: 'KM24.0NB', msg: 'LALUAN LANCAR', msg2: 'PATUHI HAD LAJU' },
-      { km: 'KM27.0NB', msg: 'MEMBANGUN MALAYSIA MADANI', msg2: '' }
+    vms: [
+      { id: 'vms-entry', type: 'Entry VMS (Buka)', km: 'KM23.0NB', position: 'Entry', status: 'Good', msg: 'SMARTLANE DITUTUP', msg2: 'LORONG KECEMASAN DIHUTANG' },
+      { id: 'vms-exit', type: 'Exit VMS (Tutup)', km: 'KM28.8NB', position: 'Exit', status: 'Good', msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' }
+    ],
+    miniVms: [
+      { id: 'mvms-1', type: 'Mini VMS', km: 'KM24.0NB', position: 'Intermediate', status: 'Good', msg: 'LALUAN LANCAR', msg2: 'PATUHI HAD LAJU' },
+      { id: 'mvms-2', type: 'Mini VMS', km: 'KM27.0NB', position: 'Intermediate', status: 'Good', msg: 'MEMBANGUN MALAYSIA', msg2: 'MADANI' }
     ],
     cctv: ['KM22.0NB', 'KM22.9NB', 'JBB I/C', 'KM25.1SB', 'KM26.4NB', 'KM27.8NB'],
     alarms: []
@@ -138,8 +149,12 @@ export const INITIAL_LOCATIONS = [
       { km: 'KM49.8NB', spd: 91, vol: 27, occ: 8 },
       { km: 'KM50.9NB', spd: 93, vol: 25, occ: 7 }
     ],
-    vmsBoards: [
-      { km: 'KM47.0NB', msg: 'JARAK SELAMAT', msg2: 'ELAK PEMANDUAN LARIAN' }
+    vms: [
+      { id: 'vms-entry', type: 'Entry VMS (Buka)', km: 'KM46.0NB', position: 'Entry', status: 'Good', msg: 'SMARTLANE DITUTUP', msg2: 'STANDBY' },
+      { id: 'vms-exit', type: 'Exit VMS (Tutup)', km: 'KM51.2NB', position: 'Exit', status: 'Good', msg: 'SMARTLANE DITUTUP', msg2: 'STANDBY' }
+    ],
+    miniVms: [
+      { id: 'mvms-1', type: 'Mini VMS', km: 'KM47.0NB', position: 'Intermediate', status: 'Good', msg: 'JARAK SELAMAT', msg2: 'ELAK PEMANDUAN LARIAN' }
     ],
     cctv: ['KM45.0NB', 'KM46.2NB', 'LAYBY I/C', 'KM48.3SB', 'KM49.6NB', 'KM51.0NB'],
     alarms: [
@@ -185,8 +200,12 @@ export const INITIAL_LOCATIONS = [
       { km: 'KM64.9NB', spd: 51, vol: 66, occ: 35 },
       { km: 'KM66.0NB', spd: 54, vol: 60, occ: 31 }
     ],
-    vmsBoards: [
-      { km: 'KM62.0NB', msg: 'KESESAKAN DIKESAN', msg2: 'JALUR KECEMASAN BERSEDIA' }
+    vms: [
+      { id: 'vms-entry', type: 'Entry VMS (Buka)', km: 'KM61.0NB', position: 'Entry', status: 'Good', msg: 'KESESAKAN DIKESAN', msg2: 'JALUR KECEMASAN BERSEDIA' },
+      { id: 'vms-exit', type: 'Exit VMS (Tutup)', km: 'KM66.5NB', position: 'Exit', status: 'Good', msg: 'KESESAKAN DIKESAN', msg2: 'BERSEDIA MASUK' }
+    ],
+    miniVms: [
+      { id: 'mvms-1', type: 'Mini VMS', km: 'KM62.0NB', position: 'Intermediate', status: 'Good', msg: 'KESESAKAN DIKESAN', msg2: 'PATUHI ARAHAN' }
     ],
     cctv: ['KM60.0NB', 'KM61.3NB', 'BERTAM I/C', 'KM63.5SB', 'KM64.9NB', 'KM66.0NB'],
     alarms: []
