@@ -637,16 +637,21 @@ export default function LocationScreen({
                 </div>
               </div>
 
-              <div className="cctv-strip">
-                {loc.cctv.map((cam, idx) => (
-                  <div key={idx} className="cctv-tile">
-                    <div className="cctv-road"></div>
-                    <div className="cctv-label">
-                      <span>{cam}</span>
-                      <span className="rec-dot"></span>
+              <div className="cctv-panel-container">
+                <div className="cctv-panel-header">LIVE CAMERAS</div>
+                <div className="cctv-grid">
+                  {(loc.cctv || []).map((cam, idx) => (
+                    <div key={idx} className="cctv-tile">
+                      <svg className="cctv-road-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <polygon points="42,0 58,0 75,100 25,100" fill="#2a3a5a" opacity="0.9" />
+                      </svg>
+                      <div className="cctv-label">
+                        <span className="cam-name">{cam}</span>
+                        <span className="rec-dot"></span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
