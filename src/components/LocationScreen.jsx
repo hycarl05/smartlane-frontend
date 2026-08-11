@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Topbar from './Topbar';
 import Schedule from './Schedule';
-import VmsEditor from './VmsEditor';
+import VmsEditor, { VmsEditorSection, DEFAULT_ROLE_TEMPLATES } from './VmsEditor';
 import {
   fmtElapsed,
   SCHEDULE_ITEMS,
@@ -232,13 +232,13 @@ export default function LocationScreen({
       </div>
 
       <div className="tabbar">
-        {['overview', 'schedule', 'log', 'reports', 'settings'].map(tabKey => (
+        {['overview', 'vms', 'schedule', 'log', 'reports', 'settings'].map(tabKey => (
           <button
             key={tabKey}
             className={`tab-btn ${activeTab === tabKey ? 'active' : ''}`}
             onClick={() => setActiveTab(tabKey)}
           >
-            {tabKey === 'log' ? 'Alarms & Log' : tabKey.charAt(0).toUpperCase() + tabKey.slice(1)}
+            {tabKey === 'vms' ? '📺 VMS Control & Editor' : tabKey === 'log' ? 'Alarms & Log' : tabKey.charAt(0).toUpperCase() + tabKey.slice(1)}
             {tabKey === 'log' && loc.alarms.length > 0 && (
               <span className="badge">{loc.alarms.length}</span>
             )}
@@ -549,18 +549,18 @@ export default function LocationScreen({
                       let dynamicMsg = b.msg;
                       let dynamicMsg2 = b.msg2;
 
-                      if (b.phaseTemplates && b.phaseTemplates[loc.phase]) {
-                        dynamicMsg = b.phaseTemplates[loc.phase].msg;
-                        dynamicMsg2 = b.phaseTemplates[loc.phase].msg2;
-                      } else if (loc.phase === 1) {
-                        dynamicMsg = b.position === 'Entry' ? 'PERHATIAN: BERSEDIA' : 'PERHATIAN: BERSEDIA';
-                        dynamicMsg2 = b.position === 'Entry' ? 'SMARTLANE AKAN DIBUKA' : 'SMARTLANE AKAN DIBUKA';
-                      } else if (loc.phase === 2) {
-                        dynamicMsg = b.position === 'Entry' ? 'SMARTLANE BERMULA' : 'SMARTLANE TAMAT';
-                        dynamicMsg2 = b.position === 'Entry' ? 'GUNAKAN LORONG KECEMASAN' : 'MASUK KE LORONG UTAMA';
-                      } else if (loc.phase === 3) {
-                        dynamicMsg = b.position === 'Entry' ? 'SMARTLANE AKAN DITUTUP' : 'KOSONGKAN LORONG KECEMASAN';
-                        dynamicMsg2 = b.position === 'Entry' ? 'BERSEDIA MASUK LORONG UTAMA' : 'SEGERA MASUK LORONG UTAMA';
+                      const activePhaseNum = loc.phase || 0;
+                      if (b.phaseTemplates && b.phaseTemplates[activePhaseNum]) {
+                        dynamicMsg = b.phaseTemplates[activePhaseNum].msg;
+                        dynamicMsg2 = b.phaseTemplates[activePhaseNum].msg2;
+                      } else if (b.position === 'Exit') {
+                        const defExit = DEFAULT_ROLE_TEMPLATES.exit[activePhaseNum] || DEFAULT_ROLE_TEMPLATES.exit[5];
+                        dynamicMsg = b.msg || defExit.msg;
+                        dynamicMsg2 = b.msg2 || defExit.msg2;
+                      } else if (b.position === 'Entry') {
+                        const defEntry = DEFAULT_ROLE_TEMPLATES.entry[activePhaseNum] || DEFAULT_ROLE_TEMPLATES.entry[5];
+                        dynamicMsg = b.msg || defEntry.msg;
+                        dynamicMsg2 = b.msg2 || defEntry.msg2;
                       } else {
                         dynamicMsg = b.msg || 'SMARTLANE DITUTUP';
                         dynamicMsg2 = b.msg2 || 'GUNA LORONG UTAMA SAHAJA';
@@ -650,6 +650,16 @@ export default function LocationScreen({
               </div>
             </div>
           </div>
+        )}
+
+        {/* VMS CONTROL & EDITOR TAB */}
+        {activeTab === 'vms' && (
+          <VmsEditorSection
+            loc={loc}
+            locations={locations}
+            onUpdateLoc={onUpdateLoc}
+            onShowToast={onShowToast}
+          />
         )}
 
         {/* SCHEDULE TAB */}

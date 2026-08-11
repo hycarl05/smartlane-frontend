@@ -3306,3 +3306,145 @@ button {
     flex: 1;
   }
 }
+
+/* VMS Section Tab Component Styling */
+.vms-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 1100px) {
+  .vms-section-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vms-module-switcher {
+  display: flex;
+  background: var(--card-soft);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  gap: 4px;
+}
+
+.mod-switch-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.mod-switch-btn.active {
+  background: var(--brand-dim);
+  color: #fff;
+  border: 1px solid var(--brand);
+}
+
+.preset-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.preset-chip-btn {
+  background: var(--card-soft);
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.preset-chip-btn:hover {
+  background: rgba(30, 136, 229, 0.15);
+  color: #fff;
+  border-color: var(--brand);
+}
+
+.vms-boards-list-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.vms-card-hw {
+  background: var(--bg-surface-elevated, #0d131f);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vms-card-hw .hw-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vms-card-hw .hw-type {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand);
+  text-transform: uppercase;
+}
+
+.vms-card-hw .hw-km {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  background: var(--card);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.vms-card-hw .hw-body {
+  background: #040804;
+  border: 1px solid #142a14;
+  border-radius: 6px;
+  padding: 8px 12px;
+  text-align: center;
+}
+
+.vms-card-hw .hw-body .t1 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--amber);
+  letter-spacing: 0.05em;
+}
+
+.vms-card-hw .hw-body .t2 {
+  font-size: 11px;
+  font-weight: 600;
+  color: #d89600;
+  margin-top: 2px;
+}
+
+.vms-card-hw .hw-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+
+.status-dot-good {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.mono-ip {
+  font-family: var(--font-mono);
+}
