@@ -55,63 +55,75 @@ export default function LocationScreen({
     ]);
   };
 
-  const handleTogglePrimary = () => {
-    if (isPending) {
-      const updatedLCS = loc.lcs.map(item => ({ ...item, open: true }));
-      onUpdateLoc(loc.id, {
-        status: 'active',
-        phase: 1,
-        phaseLabel: 'Activation',
-        elapsedSeconds: 0,
-        ps: time,
-        pe: 'Manual',
-        los: 'C',
-        trafficFlow: 'Congested (Active)',
-        lcs: updatedLCS
-      });
-      addLogEntry('operation', `Accepted threshold prompt — activated ${loc.name}`);
-      onShowToast(`Activated ${loc.name}`);
-    } else if (isActive) {
-      const updatedLCS = loc.lcs.map(item => ({ ...item, open: false }));
-      onUpdateLoc(loc.id, {
-        status: 'inactive',
-        phase: 0,
-        phaseLabel: 'Standby',
-        elapsedSeconds: 0,
-        ps: '—',
-        pe: '—',
-        los: 'B',
-        trafficFlow: 'Normal',
-        lcs: updatedLCS
-      });
-      addLogEntry('operation', `Deactivated ${loc.name}`);
-      onShowToast(`Deactivated ${loc.name}`);
-    } else {
-      const updatedLCS = loc.lcs.map(item => ({ ...item, open: true }));
-      onUpdateLoc(loc.id, {
-        status: 'active',
-        phase: 1,
-        phaseLabel: 'Activation',
-        elapsedSeconds: 0,
-        ps: time,
-        pe: 'Manual',
-        los: 'B',
-        trafficFlow: 'Normal',
-        lcs: updatedLCS
-      });
-      addLogEntry('operation', `Activated ${loc.name}`);
-      onShowToast(`Activated ${loc.name}`);
-    }
+  const handleStartPhase1 = () => {
+    // Phase 1: Pre-Activation (Initiates 3-min pre-activation cycle)
+    onUpdateLoc(loc.id, {
+      status: 'active',
+      phase: 1,
+      phaseLabel: 'Phase 1: Pre-Activation (Warning Cycle)',
+      phaseTimer: 180, // 3-minute warning cycle
+      elapsedSeconds: 0,
+      ps: time,
+      pe: 'Scheduled',
+      timestamps: {
+        ...(loc.timestamps || {}),
+        p1PreActivation: time
+      }
+    });
+    addLogEntry('operation', `Initiated Phase 1: Pre-Activation cycle (3 min warning) for ${loc.name}`);
+    onShowToast(`Phase 1 Pre-Activation started (3 min countdown)`);
   };
 
-  const handleDismissPrompt = () => {
+  const handleStartPhase2Now = () => {
+    // Skip directly to Phase 2: Active Operation
+    const updatedLCS = loc.lcs.map(item => ({ ...item, open: true }));
+    onUpdateLoc(loc.id, {
+      status: 'active',
+      phase: 2,
+      phaseLabel: 'Phase 2: Active Operation',
+      phaseTimer: 0,
+      lcs: updatedLCS,
+      timestamps: {
+        ...(loc.timestamps || {}),
+        p2Activation: time
+      }
+    });
+    addLogEntry('operation', `Phase 2 Active Operation confirmed — Emergency Lane OPEN on ${loc.name}`);
+    onShowToast(`Phase 2 Active: Emergency Lane OPEN`);
+  };
+
+  const handleStartPhase3Deactivation = () => {
+    // Phase 3: Pre-Deactivation (Initiates 3-min pre-deactivation cycle)
+    onUpdateLoc(loc.id, {
+      status: 'active',
+      phase: 3,
+      phaseLabel: 'Phase 3: Pre-Deactivation (Closure Warning)',
+      phaseTimer: 180, // 3-minute deactivation cycle
+      timestamps: {
+        ...(loc.timestamps || {}),
+        p3PreDeactivation: time
+      }
+    });
+    addLogEntry('operation', `Initiated Phase 3: Pre-Deactivation cycle (3 min warning) for ${loc.name}`);
+    onShowToast(`Phase 3 Pre-Deactivation started (3 min countdown)`);
+  };
+
+  const handleDeactivatePhase4And5 = () => {
+    // Phase 4: Deactivation (Revert LCS to Red X) -> Phase 5 (Post-Activation)
+    const updatedLCS = loc.lcs.map(item => ({ ...item, open: false }));
     onUpdateLoc(loc.id, {
       status: 'inactive',
-      phase: 0,
-      phaseLabel: 'Standby'
+      phase: 4,
+      phaseLabel: 'Phase 4: Deactivation (LCS Red X)',
+      phaseTimer: 5,
+      lcs: updatedLCS,
+      timestamps: {
+        ...(loc.timestamps || {}),
+        p4Deactivation: time
+      }
     });
-    addLogEntry('operation', `Dismissed threshold activation prompt for ${loc.name}`);
-    onShowToast('Prompt dismissed');
+    addLogEntry('operation', `Phase 4 Deactivation: Smartlane CLOSED on ${loc.name}`);
+    onShowToast(`Phase 4 Deactivated: Smartlane CLOSED`);
   };
 
   const handlePauseReason = (reason) => {
@@ -240,13 +252,26 @@ export default function LocationScreen({
                   </div>
                 )}
 
+                {/* 5-PHASE STATUS DISPLAY */}
                 <div className={`op-status ${loc.status}`}>
                   <div className="big-dot"></div>
                   <div className="op-status-text">
-                    {isActive ? 'ACTIVE' : isPending ? 'PENDING DECISION' : 'INACTIVE'}
-                    <small>{loc.phaseLabel}</small>
+                    {loc.phase === 1 ? 'PHASE 1: PRE-ACTIVATION' :
+                     loc.phase === 2 ? 'PHASE 2: ACTIVE OPERATION' :
+                     loc.phase === 3 ? 'PHASE 3: PRE-DEACTIVATION' :
+                     loc.phase === 4 ? 'PHASE 4: DEACTIVATING' :
+                     loc.phase === 5 ? 'PHASE 5: POST-ACTIVATION' : 'STANDBY / INACTIVE'}
+                    <small>{loc.phaseLabel || 'Standby Mode'}</small>
                   </div>
                 </div>
+
+                {/* PHASE COUNTDOWN TIMER BANNER */}
+                {(loc.phase === 1 || loc.phase === 3) && (loc.phaseTimer > 0) && (
+                  <div className="phase-timer-banner">
+                    <span className="timer-icon">⏳</span>
+                    <span>Automated Cycle: <b>{Math.floor(loc.phaseTimer / 60)}m {loc.phaseTimer % 60}s</b> remaining</span>
+                  </div>
+                )}
 
                 <div className="op-facts">
                   <div className="op-fact">
@@ -267,12 +292,54 @@ export default function LocationScreen({
                   </div>
                 </div>
 
-                <button
-                  className={`primary-toggle ${isActive ? 'to-deactivate' : 'to-activate'}`}
-                  onClick={handleTogglePrimary}
-                >
-                  {isActive ? 'DEACTIVATE SMARTLANE' : 'ACTIVATE SMARTLANE NOW'}
-                </button>
+                {/* 5-PHASE OPERATOR ACTION CONTROLS */}
+                <div className="phase-actions-group">
+                  {(!isActive && (loc.phase === 0 || !loc.phase || loc.phase === 5)) && (
+                    <div className="phase-btn-row">
+                      <button className="primary-toggle to-activate" onClick={handleStartPhase1}>
+                        ▶ START PHASE 1 (PRE-ACTIVATION CYCLE)
+                      </button>
+                      <button className="mini-btn good-btn" onClick={handleStartPhase2Now}>
+                        ⚡ Direct Open (Phase 2)
+                      </button>
+                    </div>
+                  )}
+
+                  {loc.phase === 1 && (
+                    <div className="phase-btn-row">
+                      <button className="primary-toggle to-activate" onClick={handleStartPhase2Now}>
+                        ✅ CONFIRM PHASE 2 (OPEN EMERGENCY LANE NOW)
+                      </button>
+                    </div>
+                  )}
+
+                  {loc.phase === 2 && (
+                    <div className="phase-btn-row">
+                      <button className="primary-toggle to-deactivate" onClick={handleStartPhase3Deactivation}>
+                        ⚠️ INITIATE PHASE 3 (PRE-DEACTIVATION WARNING)
+                      </button>
+                      <button className="mini-btn bad-btn" onClick={handleDeactivatePhase4And5}>
+                        🛑 Immediate Close (Phase 4)
+                      </button>
+                    </div>
+                  )}
+
+                  {loc.phase === 3 && (
+                    <div className="phase-btn-row">
+                      <button className="primary-toggle to-deactivate" onClick={handleDeactivatePhase4And5}>
+                        🛑 CONFIRM PHASE 4 (CLOSE EMERGENCY LANE NOW)
+                      </button>
+                    </div>
+                  )}
+
+                  {loc.phase === 5 && (
+                    <div className="phase-btn-row">
+                      <button className="mini-btn neutral-btn" onClick={() => onShowToast('Compiling Smart Lane Activation Report...')}>
+                        📄 Compile Phase 5 Activation Report
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 <div className="row-btns">
                   <button

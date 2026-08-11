@@ -35,11 +35,71 @@ export default function App() {
         })
       );
 
-      // Increment elapsedSeconds for active location
+      // Increment elapsedSeconds and process 5-phase operational transitions
       setLocations(prevLocs =>
         prevLocs.map(l => {
-          if (l.status === 'active') {
-            return { ...l, elapsedSeconds: l.elapsedSeconds + 1 };
+          // If in an active/transitioning state
+          if (l.status === 'active' || (l.phase && l.phase > 0)) {
+            const nextElapsed = (l.elapsedSeconds || 0) + 1;
+            const phaseTimer = (l.phaseTimer || 0) > 0 ? l.phaseTimer - 1 : 0;
+
+            // Automated Phase 1 -> Phase 2 transition (3-min / 180s cycle or test 10s cycle if configured)
+            if (l.phase === 1 && phaseTimer === 0) {
+              const updatedLCS = (l.lcs || []).map(item => ({ ...item, open: true }));
+              return {
+                ...l,
+                phase: 2,
+                phaseLabel: 'Phase 2: Active Operation',
+                status: 'active',
+                phaseTimer: 0,
+                elapsedSeconds: nextElapsed,
+                lcs: updatedLCS,
+                timestamps: {
+                  ...(l.timestamps || {}),
+                  p2Activation: now.toLocaleTimeString('en-GB', { hour12: false })
+                }
+              };
+            }
+
+            // Automated Phase 3 -> Phase 4 transition (3-min / 180s cycle or timer completion)
+            if (l.phase === 3 && phaseTimer === 0) {
+              const updatedLCS = (l.lcs || []).map(item => ({ ...item, open: false }));
+              return {
+                ...l,
+                phase: 4,
+                phaseLabel: 'Phase 4: Deactivation',
+                status: 'inactive',
+                phaseTimer: 5, // 5s transition to Phase 5
+                elapsedSeconds: 0,
+                lcs: updatedLCS,
+                timestamps: {
+                  ...(l.timestamps || {}),
+                  p4Deactivation: now.toLocaleTimeString('en-GB', { hour12: false })
+                }
+              };
+            }
+
+            // Automated Phase 4 -> Phase 5 transition (Post-Activation reporting compilation)
+            if (l.phase === 4 && phaseTimer === 0) {
+              return {
+                ...l,
+                phase: 5,
+                phaseLabel: 'Phase 5: Post-Activation & Reporting',
+                status: 'inactive',
+                phaseTimer: 0,
+                elapsedSeconds: 0,
+                timestamps: {
+                  ...(l.timestamps || {}),
+                  p5PostDeactivation: now.toLocaleTimeString('en-GB', { hour12: false })
+                }
+              };
+            }
+
+            return {
+              ...l,
+              elapsedSeconds: l.status === 'active' ? nextElapsed : 0,
+              phaseTimer: phaseTimer
+            };
           }
           return l;
         })
