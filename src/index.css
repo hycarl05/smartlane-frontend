@@ -354,11 +354,11 @@ button {
   background: var(--card);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
-  padding: 14px 20px;
-  display: flex;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: 240px 140px 1fr 340px;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
   cursor: pointer;
   transition: all .18s ease;
   overflow: hidden;
@@ -381,21 +381,37 @@ button {
 .loc-accent-stripe.is-pending { background: var(--amber); }
 .loc-accent-stripe.is-inactive { background: transparent; }
 
-.row-col-main {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex: 1.2;
-}
-
-.loc-name-wrap {
+.row-col-name {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+}
+
+.row-col-name .loc-name {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text);
+}
+
+.row-col-name .loc-dir {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  margin-top: 3px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.row-col-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .row-road-glyph {
-  width: 140px;
-  height: 20px;
+  width: 130px;
+  height: 18px;
 }
 
 .row-road-glyph .track {
@@ -406,27 +422,72 @@ button {
 .row-road-glyph .flow {
   stroke: var(--accent);
   stroke-width: 3;
-  stroke-dasharray: 6 6;
-  animation: flowbar 1.5s linear infinite;
+  stroke-dasharray: 6 7;
+  opacity: 0;
+}
+
+.loc-row-card.is-active .row-road-glyph .flow {
+  opacity: 1;
+  animation: flow 1.1s linear infinite;
+}
+
+.loc-row-card.is-active .row-road-glyph .track {
+  stroke: var(--line-soft);
+}
+
+.loc-row-card.is-pending .row-road-glyph .flow {
+  stroke: var(--amber);
+  opacity: 1;
+  animation: flow 1.1s linear infinite;
 }
 
 .row-road-glyph .marker {
-  fill: var(--line);
+  fill: var(--text-faint);
 }
-.row-road-glyph .marker.on {
+
+.loc-row-card.is-active .row-road-glyph .marker.on {
   fill: var(--accent);
 }
 
+.loc-row-card.is-pending .row-road-glyph .marker.on {
+  fill: var(--amber);
+}
+
 .row-col-metrics {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   align-items: center;
-  gap: 32px;
-  flex: 1.5;
+  gap: 16px;
+  padding: 0 10px;
+}
+
+.row-col-metrics .loc-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.row-col-metrics .loc-meta .lbl {
+  font-size: 10px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 3px;
+  white-space: nowrap;
+}
+
+.row-col-metrics .loc-meta .val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
 }
 
 .row-col-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 14px;
 }
 

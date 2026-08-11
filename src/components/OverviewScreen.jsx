@@ -98,22 +98,24 @@ export default function OverviewScreen({ locations, onSelectLocation, time, date
               >
                 <div className={`loc-accent-stripe is-${loc.status}`}></div>
 
-                {/* LOC NAME & SCHEMATIC */}
-                <div className="row-col-main">
-                  <div className="loc-name-wrap">
-                    <div className="loc-name">{loc.name}</div>
-                    <div className="loc-dir">{loc.direction}</div>
-                  </div>
-                  <svg className="row-road-glyph" viewBox="0 0 160 20">
-                    <line className="track" x1="4" y1="10" x2="156" y2="10" />
-                    <line className="flow" x1="4" y1="10" x2="156" y2="10" />
-                    {[16, 48, 80, 112, 144].map(x => (
+                {/* LOC NAME */}
+                <div className="row-col-name">
+                  <div className="loc-name">{loc.name}</div>
+                  <div className="loc-dir">{loc.direction}</div>
+                </div>
+
+                {/* CENTERED SCHEMATIC */}
+                <div className="row-col-glyph">
+                  <svg className="row-road-glyph" viewBox="0 0 220 34" preserveAspectRatio="none">
+                    <line className="track" x1="6" y1="17" x2="214" y2="17" />
+                    <line className="flow" x1="6" y1="17" x2="214" y2="17" />
+                    {[26, 66, 106, 146, 186].map(x => (
                       <circle
                         key={x}
                         className={`marker ${isActive || isPending ? 'on' : ''}`}
                         cx={x}
-                        cy="10"
-                        r="2.5"
+                        cy="17"
+                        r="3"
                       />
                     ))}
                   </svg>
