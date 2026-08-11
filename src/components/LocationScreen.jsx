@@ -55,6 +55,20 @@ export default function LocationScreen({
     ]);
   };
 
+  const handleTogglePrimary = () => {
+    handleStartPhase1();
+  };
+
+  const handleDismissPrompt = () => {
+    onUpdateLoc(loc.id, {
+      status: 'inactive',
+      phase: 0,
+      phaseLabel: 'Standby'
+    });
+    addLogEntry('operation', `Dismissed activation recommendation for ${loc.name}`);
+    onShowToast('Activation recommendation dismissed');
+  };
+
   const handleStartPhase1 = () => {
     // Phase 1: Pre-Activation (Initiates 3-min pre-activation cycle)
     onUpdateLoc(loc.id, {
@@ -535,7 +549,10 @@ export default function LocationScreen({
                       let dynamicMsg = b.msg;
                       let dynamicMsg2 = b.msg2;
 
-                      if (loc.phase === 1) {
+                      if (b.phaseTemplates && b.phaseTemplates[loc.phase]) {
+                        dynamicMsg = b.phaseTemplates[loc.phase].msg;
+                        dynamicMsg2 = b.phaseTemplates[loc.phase].msg2;
+                      } else if (loc.phase === 1) {
                         dynamicMsg = b.position === 'Entry' ? 'PERHATIAN: BERSEDIA' : 'PERHATIAN: BERSEDIA';
                         dynamicMsg2 = b.position === 'Entry' ? 'SMARTLANE AKAN DIBUKA' : 'SMARTLANE AKAN DIBUKA';
                       } else if (loc.phase === 2) {
@@ -585,7 +602,10 @@ export default function LocationScreen({
                       let miniMsg = mb.msg;
                       let miniMsg2 = mb.msg2;
 
-                      if (loc.phase === 2) {
+                      if (mb.phaseTemplates && mb.phaseTemplates[loc.phase]) {
+                        miniMsg = mb.phaseTemplates[loc.phase].msg;
+                        miniMsg2 = mb.phaseTemplates[loc.phase].msg2;
+                      } else if (loc.phase === 2) {
                         miniMsg = mb.msg;
                         miniMsg2 = mb.msg2;
                       } else if (loc.phase === 1 || loc.phase === 3) {

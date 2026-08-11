@@ -66,13 +66,27 @@ export default function VmsEditor({
     };
     setTemplates(updated);
 
+    const updateSign = (sign) => {
+      const existingTemplates = sign.phaseTemplates || {};
+      const updatedPhaseTemplates = {
+        ...existingTemplates,
+        [selectedPhase]: { msg: activeForm.msg, msg2: activeForm.msg2 }
+      };
+      return {
+        ...sign,
+        msg: activeForm.msg,
+        msg2: activeForm.msg2,
+        phaseTemplates: updatedPhaseTemplates
+      };
+    };
+
     // Apply / push message updates based on scope
     if (selectedScope === 'individual') {
       // Update specific sign on current location
       const fieldKey = moduleType === 'vms' ? 'vms' : 'miniVms';
       const updatedList = (loc[fieldKey] || []).map(sign => {
         if (sign.id === selectedSignId) {
-          return { ...sign, msg: activeForm.msg, msg2: activeForm.msg2 };
+          return updateSign(sign);
         }
         return sign;
       });
@@ -81,22 +95,14 @@ export default function VmsEditor({
     } else if (selectedScope === 'group') {
       // Push to all signs in this category for current location
       const fieldKey = moduleType === 'vms' ? 'vms' : 'miniVms';
-      const updatedList = (loc[fieldKey] || []).map(sign => ({
-        ...sign,
-        msg: activeForm.msg,
-        msg2: activeForm.msg2
-      }));
+      const updatedList = (loc[fieldKey] || []).map(sign => updateSign(sign));
       onUpdateLoc(loc.id, { [fieldKey]: updatedList });
       if (onShowToast) onShowToast(`Phase ${selectedPhase} template pushed to all ${moduleType === 'vms' ? 'Standard VMS' : 'Mini VMS'} signs on ${loc.name}`);
     } else if (selectedScope === 'all-locations') {
       // Push to all highway locations
       const fieldKey = moduleType === 'vms' ? 'vms' : 'miniVms';
       locations.forEach(l => {
-        const updatedList = (l[fieldKey] || []).map(sign => ({
-          ...sign,
-          msg: activeForm.msg,
-          msg2: activeForm.msg2
-        }));
+        const updatedList = (l[fieldKey] || []).map(sign => updateSign(sign));
         onUpdateLoc(l.id, { [fieldKey]: updatedList });
       });
       if (onShowToast) onShowToast(`Phase ${selectedPhase} template pushed to ALL highway locations!`);
