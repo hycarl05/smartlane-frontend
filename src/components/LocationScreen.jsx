@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Topbar from './Topbar';
+import Schedule from './Schedule';
 import {
   fmtElapsed,
   SCHEDULE_ITEMS,
@@ -445,56 +446,7 @@ export default function LocationScreen({
 
         {/* SCHEDULE TAB */}
         {activeTab === 'schedule' && (
-          <div className="tab-panel active">
-            <div className="sched-grid">
-              <div className="panel" style={{ minHeight: 0 }}>
-                <div className="panel-title">Upcoming &amp; Recent Runs</div>
-                <div className="sched-list">
-                  {SCHEDULE_ITEMS.map((item, idx) => (
-                    <div key={idx} className="sched-row">
-                      <div className="left">
-                        <div className="t1">{item.name}</div>
-                        <div className="t2">{item.time} · {item.mode}</div>
-                      </div>
-                      <span className={`tag ${item.status === 'Upcoming' ? 'good' : 'neutral'}`}>
-                        {item.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  className="add-sched-btn"
-                  style={{ marginTop: '10px' }}
-                  onClick={() => onShowToast('Schedule creation modal (mocked)')}
-                >
-                  + New schedule
-                </button>
-              </div>
-
-              <div className="panel" style={{ minHeight: 0 }}>
-                <div className="panel-title">This Week</div>
-                <div className="week-grid">
-                  {WEEK_DAYS.map((day, idx) => (
-                    <div key={idx} className={`week-cell ${idx < 5 ? 'has-run' : ''}`}>
-                      {day}
-                      <span className="d">{idx + 10}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="panel-title" style={{ marginTop: '16px' }}>Holiday &amp; Exceptions</div>
-                <div className="sched-list">
-                  <div className="sched-row">
-                    <div className="left">
-                      <div className="t1">Hari Merdeka Holiday Schedule</div>
-                      <div className="t2">31 Aug 2026 · Extended 06:00–22:00</div>
-                    </div>
-                    <span className="tag warn">Active Override</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <Schedule loc={loc} onShowToast={onShowToast} />
         )}
 
         {/* LOG TAB */}
