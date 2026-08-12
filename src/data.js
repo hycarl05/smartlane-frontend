@@ -23,7 +23,7 @@ export const INITIAL_LOCATIONS = [
       { km: 'KM4.5SB', type: 'CCTV', status: 'ok' },
       { km: 'KM5.9NB', type: 'CCTV', status: 'ok' },
       { km: 'KM7.0NB', type: 'CCTV', status: 'ok' },
-      { km: 'KM8.2NB', type: 'CCTV', status: 'off' }
+      { km: 'KM8.2NB', type: 'CCTV', status: 'fault' }
     ],
     lcs: [
       { km: 'KM3.8NB', open: true },
@@ -129,7 +129,7 @@ export const INITIAL_LOCATIONS = [
     equipment: { cctv: [5, 6], avds: [5, 5], lcs: [5, 5], vms: [2, 2], miniVms: [2, 2] },
     gantries: [
       { km: 'KM45.0NB', type: 'CCTV', status: 'ok' },
-      { km: 'KM46.2NB', type: 'CCTV', status: 'off' },
+      { km: 'KM46.2NB', type: 'CCTV', status: 'fault' },
       { km: 'LAYBY I/C', type: 'CCTV', status: 'ok' },
       { km: 'KM48.3SB', type: 'CCTV', status: 'ok' },
       { km: 'KM49.6NB', type: 'CCTV', status: 'ok' },

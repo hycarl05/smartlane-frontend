@@ -7,23 +7,51 @@ export const DEFAULT_ROLE_TEMPLATES = {
     2: { msg: 'SMARTLANE BERMULA', msg2: 'GUNAKAN LORONG KECEMASAN' },
     3: { msg: 'SMARTLANE AKAN DITUTUP', msg2: 'BERSEDIA MASUK LORONG UTAMA' },
     4: { msg: 'PEMERIKSAAN LORONG', msg2: 'PATUHI ARAHAN PETUGAS' },
-    5: { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' }
+    5: { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' },
+    0: { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' }
   },
   exit: {
     1: { msg: 'PERHATIAN: BERSEDIA', msg2: 'SMARTLANE AKAN DIBUKA' },
     2: { msg: 'SMARTLANE TAMAT', msg2: 'MASUK KEMBALI KE LORONG UTAMA' },
     3: { msg: 'SMARTLANE AKAN DITUTUP', msg2: 'KOSONGKAN LORONG KECEMASAN' },
     4: { msg: 'PEMERIKSAAN LORONG', msg2: 'PATUHI ARAHAN PETUGAS' },
-    5: { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' }
+    5: { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' },
+    0: { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' }
   },
   mini: {
     1: { msg: 'PATUHI ARAHAN', msg2: 'PERHATIKAN ISYARAT LCS' },
     2: { msg: 'JALUR KECEMASAN', msg2: 'DIBUKA SEMENTARA' },
     3: { msg: 'BERSEDIA KELUAR', msg2: 'SEGERA MASUK LORONG UTAMA' },
     4: { msg: 'PEMERIKSAAN KAWASAN', msg2: 'PANDU DENGAN CERMAT' },
-    5: { msg: 'LORONG KECEMASAN', msg2: 'DITUTUP SEMENTARA' }
+    5: { msg: 'LORONG KECEMASAN', msg2: 'DITUTUP SEMENTARA' },
+    0: { msg: 'LORONG KECEMASAN', msg2: 'DITUTUP SEMENTARA' }
   }
 };
+
+export function getDynamicVmsMessage(sign, phase = 0) {
+  if (!sign) return { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' };
+  const pNum = Number(phase) || 0;
+
+  if (sign.phaseTemplates && sign.phaseTemplates[pNum]) {
+    return sign.phaseTemplates[pNum];
+  }
+
+  let role = 'entry';
+  if (sign.position === 'Exit') {
+    role = 'exit';
+  } else if (sign.position === 'Entry') {
+    role = 'entry';
+  } else if (
+    sign.type?.toLowerCase().includes('mini') ||
+    sign.position === 'Intermediate' ||
+    sign.id?.startsWith('mvms')
+  ) {
+    role = 'mini';
+  }
+
+  const roleMap = DEFAULT_ROLE_TEMPLATES[role] || DEFAULT_ROLE_TEMPLATES.entry;
+  return roleMap[pNum] || roleMap[0] || roleMap[5] || { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' };
+}
 
 const ENTRY_PRESETS = [
   { msg: 'SMARTLANE BERMULA', msg2: 'GUNAKAN LORONG KECEMASAN' },
@@ -571,23 +599,9 @@ export function VmsEditorSection({
           <div className="vms-boards-list-grid">
             {signsList.map(s => {
               const activePhaseNum = loc?.phase || 0;
-              const hasCustom = s.phaseTemplates && s.phaseTemplates[activePhaseNum];
-              
-              let displayMsg1 = s.msg;
-              let displayMsg2 = s.msg2;
-
-              if (hasCustom) {
-                displayMsg1 = s.phaseTemplates[activePhaseNum].msg;
-                displayMsg2 = s.phaseTemplates[activePhaseNum].msg2;
-              } else if (s.position === 'Exit') {
-                const defExit = DEFAULT_ROLE_TEMPLATES.exit[activePhaseNum] || DEFAULT_ROLE_TEMPLATES.exit[5];
-                displayMsg1 = s.msg || defExit.msg;
-                displayMsg2 = s.msg2 || defExit.msg2;
-              } else if (s.position === 'Entry') {
-                const defEntry = DEFAULT_ROLE_TEMPLATES.entry[activePhaseNum] || DEFAULT_ROLE_TEMPLATES.entry[5];
-                displayMsg1 = s.msg || defEntry.msg;
-                displayMsg2 = s.msg2 || defEntry.msg2;
-              }
+              const dMsg = getDynamicVmsMessage(s, activePhaseNum);
+              const displayMsg1 = dMsg.msg;
+              const displayMsg2 = dMsg.msg2;
 
               return (
                 <div key={s.id || s.km} className="vms-card-hw">

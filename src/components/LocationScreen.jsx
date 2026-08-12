@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import Topbar from './Topbar';
 import Schedule from './Schedule';
-import VmsEditor, { VmsEditorSection, DEFAULT_ROLE_TEMPLATES } from './VmsEditor';
+import VmsEditor, { VmsEditorSection, DEFAULT_ROLE_TEMPLATES, getDynamicVmsMessage } from './VmsEditor';
+import CctvModal from './CctvModal';
 import {
   fmtElapsed,
   SCHEDULE_ITEMS,
@@ -35,6 +36,9 @@ export default function LocationScreen({
   // VMS Editor Modal State
   const [showVmsEditor, setShowVmsEditor] = useState(false);
   const [vmsModuleType, setVmsModuleType] = useState('vms'); // 'vms' | 'miniVms'
+
+  // CCTV Inspection Modal State
+  const [selectedCctv, setSelectedCctv] = useState(null);
 
   const handleOpenVmsEditor = (type = 'vms') => {
     setVmsModuleType(type);
@@ -430,8 +434,26 @@ export default function LocationScreen({
 
                 <div className="gantry-row">
                   {loc.gantries.map((g, idx) => (
-                    <div key={idx} className="gantry">
-                      <div className={`gantry-icon ${g.status}`}>{g.type === 'CCTV' ? '📷' : '🚦'}</div>
+                    <div
+                      key={idx}
+                      className="gantry"
+                      onClick={() => {
+                        if (g.type === 'CCTV') {
+                          setSelectedCctv(g);
+                        }
+                      }}
+                      style={{ cursor: g.type === 'CCTV' ? 'pointer' : 'default' }}
+                      title={
+                        g.type === 'CCTV'
+                          ? g.status === 'ok'
+                            ? `CCTV ${g.km}: ONLINE — Continuous 24/7 Recording Active (Click to View Stream)`
+                            : `CCTV ${g.km}: HARDWARE FAULT — Physical Connection Lost (Cannot be turned off by admins)`
+                          : `LCS Gantry ${g.km}`
+                      }
+                    >
+                      <div className={`gantry-icon ${g.status === 'fault' || g.status === 'off' ? 'off' : g.status}`}>
+                        {g.type === 'CCTV' ? '📷' : '🚦'}
+                      </div>
                       <div className="gantry-label">{g.km}</div>
                     </div>
                   ))}
@@ -546,25 +568,7 @@ export default function LocationScreen({
                   </div>
                   <div className="vms-boards-wrap">
                     {(loc.vms || []).map((b) => {
-                      let dynamicMsg = b.msg;
-                      let dynamicMsg2 = b.msg2;
-
-                      const activePhaseNum = loc.phase || 0;
-                      if (b.phaseTemplates && b.phaseTemplates[activePhaseNum]) {
-                        dynamicMsg = b.phaseTemplates[activePhaseNum].msg;
-                        dynamicMsg2 = b.phaseTemplates[activePhaseNum].msg2;
-                      } else if (b.position === 'Exit') {
-                        const defExit = DEFAULT_ROLE_TEMPLATES.exit[activePhaseNum] || DEFAULT_ROLE_TEMPLATES.exit[5];
-                        dynamicMsg = b.msg || defExit.msg;
-                        dynamicMsg2 = b.msg2 || defExit.msg2;
-                      } else if (b.position === 'Entry') {
-                        const defEntry = DEFAULT_ROLE_TEMPLATES.entry[activePhaseNum] || DEFAULT_ROLE_TEMPLATES.entry[5];
-                        dynamicMsg = b.msg || defEntry.msg;
-                        dynamicMsg2 = b.msg2 || defEntry.msg2;
-                      } else {
-                        dynamicMsg = b.msg || 'SMARTLANE DITUTUP';
-                        dynamicMsg2 = b.msg2 || 'GUNA LORONG UTAMA SAHAJA';
-                      }
+                      const tpl = getDynamicVmsMessage(b, loc.phase || 0);
 
                       return (
                         <div
@@ -574,8 +578,8 @@ export default function LocationScreen({
                           title="Click to edit VMS message template"
                         >
                           <div className="vms-badge">{b.type}</div>
-                          <div className="vms-msg">{dynamicMsg}</div>
-                          <div className="vms-msg small">{dynamicMsg2}</div>
+                          <div className="vms-msg">{tpl.msg}</div>
+                          <div className="vms-msg small">{tpl.msg2}</div>
                           <div className="vms-footer">
                             <span className={`vms-health ${b.status ? b.status.toLowerCase() : 'good'}`}>● {b.status || 'Good'}</span>
                             <span className="km-tag">{b.km}</span>
@@ -599,22 +603,7 @@ export default function LocationScreen({
                   </div>
                   <div className="vms-boards-wrap">
                     {(loc.miniVms || []).map((mb) => {
-                      let miniMsg = mb.msg;
-                      let miniMsg2 = mb.msg2;
-
-                      if (mb.phaseTemplates && mb.phaseTemplates[loc.phase]) {
-                        miniMsg = mb.phaseTemplates[loc.phase].msg;
-                        miniMsg2 = mb.phaseTemplates[loc.phase].msg2;
-                      } else if (loc.phase === 2) {
-                        miniMsg = mb.msg;
-                        miniMsg2 = mb.msg2;
-                      } else if (loc.phase === 1 || loc.phase === 3) {
-                        miniMsg = 'PATUHI ARAHAN';
-                        miniMsg2 = 'PERHATIKAN ISYARAT LCS';
-                      } else {
-                        miniMsg = mb.msg || 'LORONG KECEMASAN';
-                        miniMsg2 = mb.msg2 || 'DITUTUP';
-                      }
+                      const tpl = getDynamicVmsMessage(mb, loc.phase || 0);
 
                       return (
                         <div
@@ -624,8 +613,8 @@ export default function LocationScreen({
                           title="Click to edit Mini VMS message template"
                         >
                           <div className="vms-badge mini">Mini VMS</div>
-                          <div className="vms-msg">{miniMsg}</div>
-                          <div className="vms-msg small">{miniMsg2}</div>
+                          <div className="vms-msg">{tpl.msg}</div>
+                          <div className="vms-msg small">{tpl.msg2}</div>
                           <div className="vms-footer">
                             <span className={`vms-health ${mb.status ? mb.status.toLowerCase() : 'good'}`}>● {mb.status || 'Good'}</span>
                             <span className="km-tag">{mb.km}</span>
@@ -814,20 +803,30 @@ export default function LocationScreen({
                           <td className="mono">10.180.4.{10 + idx}</td>
                           <td>
                             <span className={`pill-status ${g.status === 'ok' ? 'good' : 'bad'}`}>
-                              {g.status.toUpperCase()}
+                              {g.status === 'ok' ? 'ONLINE (24/7 REC)' : 'HARDWARE FAULT'}
                             </span>
                           </td>
                           <td>
-                            <a
-                              href="#"
-                              className="edit-link"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                onShowToast(`Configure EQ-${loc.id.toUpperCase()}-0${idx + 1}`);
-                              }}
-                            >
-                              Configure
-                            </a>
+                            {g.type === 'CCTV' ? (
+                              <button
+                                className="mini-btn good-btn"
+                                style={{ padding: '2px 8px', fontSize: '11px' }}
+                                onClick={() => setSelectedCctv(g)}
+                              >
+                                📹 Stream Feed
+                              </button>
+                            ) : (
+                              <a
+                                href="#"
+                                className="edit-link"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  onShowToast(`Configure EQ-${loc.id.toUpperCase()}-0${idx + 1}`);
+                                }}
+                              >
+                                Configure
+                              </a>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -850,6 +849,17 @@ export default function LocationScreen({
         onUpdateLoc={onUpdateLoc}
         onShowToast={onShowToast}
       />
+
+      {/* CCTV LIVE STREAM & INSPECTION MODAL */}
+      {selectedCctv && (
+        <CctvModal
+          cctv={selectedCctv}
+          locName={loc.name}
+          onClose={() => setSelectedCctv(null)}
+          onLogAudit={addLogEntry}
+          onShowToast={onShowToast}
+        />
+      )}
     </div>
   );
 }
