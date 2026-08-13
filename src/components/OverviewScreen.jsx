@@ -7,12 +7,6 @@ export default function OverviewScreen({ locations, onSelectLocation, time, date
   const pendingCount = locations.filter(l => l.status === 'pending').length;
   const totalAlarms = locations.reduce((sum, l) => sum + l.alarms.length, 0);
 
-  const getSeverityWorst = (loc) => {
-    if (loc.alarms.some(a => a.sev === 'critical')) return 'critical';
-    if (loc.alarms.some(a => a.sev === 'warning')) return 'warning';
-    return 'none';
-  };
-
   const allAlarms = [];
   locations.forEach(l => {
     l.alarms.forEach(a => {
@@ -165,3 +159,4 @@ export default function OverviewScreen({ locations, onSelectLocation, time, date
     </div>
   );
 }
+

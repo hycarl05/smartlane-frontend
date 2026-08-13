@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import LoginScreen from './components/LoginScreen';
 import OverviewScreen from './components/OverviewScreen';
 import LocationScreen from './components/LocationScreen';
-import { INITIAL_LOCATIONS } from './data';
+import { INITIAL_LOCATIONS, INITIAL_AUDIT_LOGS } from './data';
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -11,6 +11,7 @@ export default function App() {
   });
 
   const [locations, setLocations] = useState(INITIAL_LOCATIONS);
+  const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
   const [screen, setScreen] = useState('overview'); // 'overview' | 'location'
   const [activeLocId, setActiveLocId] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
@@ -20,6 +21,29 @@ export default function App() {
 
   const [toastMsg, setToastMsg] = useState('');
   const [showToast, setShowToast] = useState(false);
+
+  // Helper to add new audit log entry
+  const addAuditLog = (moduleName, activity, locationName = 'Global / System-Wide', equipmentId = 'N/A', result = 'Success') => {
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
+    const timestampStr = `${dateStr} ${timeStr}`;
+    const newLog = {
+      id: `AUD-${dateStr.replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`,
+      timestamp: timestampStr,
+      date: dateStr,
+      time: timeStr,
+      initiator: user ? `${user.username || user.name || 'operator'} (${user.role || 'Operator'})` : 'system_process',
+      initiatorRole: user ? (user.role || 'Operator') : 'System Process',
+      module: moduleName,
+      activity: activity,
+      location: locationName,
+      equipmentId: equipmentId,
+      result: result,
+      securityHash: `sha256:${Math.random().toString(36).substring(2, 12)}${Math.random().toString(36).substring(2, 10)}`
+    };
+    setAuditLogs(prev => [newLog, ...prev]);
+  };
 
   // Clock tick timer
   useEffect(() => {
@@ -38,12 +62,10 @@ export default function App() {
       // Increment elapsedSeconds and process 5-phase operational transitions
       setLocations(prevLocs =>
         prevLocs.map(l => {
-          // If in an active/transitioning state
           if (l.status === 'active' || (l.phase && l.phase > 0)) {
             const nextElapsed = (l.elapsedSeconds || 0) + 1;
             const phaseTimer = (l.phaseTimer || 0) > 0 ? l.phaseTimer - 1 : 0;
 
-            // Automated Phase 1 -> Phase 2 transition (3-min / 180s cycle or test 10s cycle if configured)
             if (l.phase === 1 && phaseTimer === 0) {
               const updatedLCS = (l.lcs || []).map(item => ({ ...item, open: true }));
               return {
@@ -61,7 +83,6 @@ export default function App() {
               };
             }
 
-            // Automated Phase 3 -> Phase 4 transition (3-min / 180s cycle or timer completion)
             if (l.phase === 3 && phaseTimer === 0) {
               const updatedLCS = (l.lcs || []).map(item => ({ ...item, open: false }));
               return {
@@ -69,7 +90,7 @@ export default function App() {
                 phase: 4,
                 phaseLabel: 'Phase 4: Deactivation',
                 status: 'inactive',
-                phaseTimer: 5, // 5s transition to Phase 5
+                phaseTimer: 5,
                 elapsedSeconds: 0,
                 lcs: updatedLCS,
                 timestamps: {
@@ -79,7 +100,6 @@ export default function App() {
               };
             }
 
-            // Automated Phase 4 -> Phase 5 transition (Post-Activation reporting compilation)
             if (l.phase === 4 && phaseTimer === 0) {
               return {
                 ...l,
@@ -123,9 +143,11 @@ export default function App() {
     setUser(userData);
     localStorage.setItem('smartlane_user', JSON.stringify(userData));
     triggerToast(`Welcome back, ${userData.name || userData.username}!`);
+    addAuditLog('System Core', `User authentication successful for session`, 'Global / System-Wide', 'AUTH-SRV', 'Success');
   };
 
   const handleLogout = () => {
+    addAuditLog('System Core', `User logged out cleanly`, 'Global / System-Wide', 'AUTH-SRV', 'Success');
     setUser(null);
     localStorage.removeItem('smartlane_user');
     setScreen('overview');
@@ -145,9 +167,19 @@ export default function App() {
   };
 
   const handleUpdateLocation = (id, updatedFields) => {
+    const locObj = locations.find(l => l.id === id);
     setLocations(prevLocs =>
       prevLocs.map(l => (l.id === id ? { ...l, ...updatedFields } : l))
     );
+    if (locObj) {
+      addAuditLog(
+        'Control Panel',
+        `Location operational state updated for ${locObj.name}`,
+        locObj.name,
+        `CTRL-${locObj.id.toUpperCase()}`,
+        updatedFields.status === 'pending' ? 'Paused' : 'Success'
+      );
+    }
   };
 
   // If user is not authenticated, show LoginScreen
@@ -170,16 +202,19 @@ export default function App() {
       {screen === 'overview' ? (
         <OverviewScreen
           locations={locations}
+          auditLogs={auditLogs}
           onSelectLocation={handleSelectLocation}
           time={clockTime}
           date={clockDate}
           user={user}
           onLogout={handleLogout}
+          onShowToast={triggerToast}
         />
       ) : (
         <LocationScreen
           loc={activeLoc}
           locations={locations}
+          auditLogs={auditLogs}
           onSelectLocation={handleSelectLocation}
           activeTab={activeTab}
           setActiveTab={setActiveTab}

@@ -3,6 +3,7 @@ import Topbar from './Topbar';
 import Schedule from './Schedule';
 import VmsEditor, { VmsEditorSection, DEFAULT_ROLE_TEMPLATES, getDynamicVmsMessage } from './VmsEditor';
 import CctvModal from './CctvModal';
+import AuditLogDisplay from './AuditLogDisplay';
 import {
   fmtElapsed,
   SCHEDULE_ITEMS,
@@ -15,6 +16,7 @@ import {
 export default function LocationScreen({
   loc,
   locations = [],
+  auditLogs = [],
   onSelectLocation,
   activeTab,
   setActiveTab,
@@ -254,10 +256,22 @@ export default function LocationScreen({
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="tab-panel active">
+
+            {/* ── TOP ROW ─────────────────────────────────────────── */}
             <div className="ov-grid">
-              {/* LEFT PANEL */}
+
+              {/* LEFT: Operation Control */}
               <div className="panel" style={{ position: 'relative' }}>
-                <div className="panel-title">Operation Control</div>
+                <div className="panel-title">
+                  <span>Operation Control</span>
+                  <span className={`op-phase-badge phase-${loc.phase || 0}`}>
+                    {loc.phase === 1 ? 'Phase 1' :
+                     loc.phase === 2 ? 'Phase 2' :
+                     loc.phase === 3 ? 'Phase 3' :
+                     loc.phase === 4 ? 'Phase 4' :
+                     loc.phase === 5 ? 'Phase 5' : 'Standby'}
+                  </span>
+                </div>
 
                 {isPending && (
                   <div className="prompt-banner">
@@ -322,7 +336,6 @@ export default function LocationScreen({
                       </button>
                     </div>
                   )}
-
                   {loc.phase === 1 && (
                     <div className="phase-btn-row">
                       <button className="primary-toggle to-activate" onClick={handleStartPhase2Now}>
@@ -330,7 +343,6 @@ export default function LocationScreen({
                       </button>
                     </div>
                   )}
-
                   {loc.phase === 2 && (
                     <div className="phase-btn-row">
                       <button className="primary-toggle to-deactivate" onClick={handleStartPhase3Deactivation}>
@@ -341,7 +353,6 @@ export default function LocationScreen({
                       </button>
                     </div>
                   )}
-
                   {loc.phase === 3 && (
                     <div className="phase-btn-row">
                       <button className="primary-toggle to-deactivate" onClick={handleDeactivatePhase4And5}>
@@ -349,7 +360,6 @@ export default function LocationScreen({
                       </button>
                     </div>
                   )}
-
                   {loc.phase === 5 && (
                     <div className="phase-btn-row">
                       <button className="mini-btn neutral-btn" onClick={() => onShowToast('Compiling Smart Lane Activation Report...')}>
@@ -419,7 +429,7 @@ export default function LocationScreen({
                 </div>
               </div>
 
-              {/* CENTER PANEL */}
+              {/* CENTER: Live Schematic — wide & prominent */}
               <div className="panel schematic-wrap">
                 <div className="panel-title">
                   Live Schematic{' '}
@@ -447,7 +457,7 @@ export default function LocationScreen({
                         g.type === 'CCTV'
                           ? g.status === 'ok'
                             ? `CCTV ${g.km}: ONLINE — Continuous 24/7 Recording Active (Click to View Stream)`
-                            : `CCTV ${g.km}: HARDWARE FAULT — Physical Connection Lost (Cannot be turned off by admins)`
+                            : `CCTV ${g.km}: HARDWARE FAULT — Physical Connection Lost`
                           : `LCS Gantry ${g.km}`
                       }
                     >
@@ -498,137 +508,77 @@ export default function LocationScreen({
                 </div>
               </div>
 
-              {/* RIGHT PANEL */}
-              <div className="panel">
-                <div className="panel-title">System Status</div>
-                <div className="status-list">
-                  <div className="status-item">
-                    <span className="lbl">Traffic flow</span>
-                    <span className={`tag ${loc.trafficFlow.includes('Congested') ? 'warn' : 'good'}`}>
-                      {loc.trafficFlow}
-                    </span>
-                  </div>
-                  <div className="status-item">
-                    <span className="lbl">Active alarms</span>
-                    <span className={`tag ${loc.alarms.length > 0 ? 'bad' : 'good'}`}>
-                      {loc.alarms.length} open
-                    </span>
-                  </div>
-                  <div className="status-item">
-                    <span className="lbl">Incidents</span>
-                    <span className="tag neutral">{loc.incidents} reported</span>
-                  </div>
-                  <div className="status-item">
-                    <span className="lbl">Level of service</span>
-                    <span className={`tag ${loc.los === 'A' || loc.los === 'B' ? 'good' : 'warn'}`}>
-                      LOS {loc.los}
-                    </span>
+              {/* RIGHT: System Status + Equipment Health stacked */}
+              <div className="ov-right-stack">
+                <div className="panel ov-right-sub">
+                  <div className="panel-title">System Status</div>
+                  <div className="status-list">
+                    <div className="status-item">
+                      <span className="lbl">Traffic flow</span>
+                      <span className={`tag ${loc.trafficFlow.includes('Congested') ? 'warn' : 'good'}`}>
+                        {loc.trafficFlow}
+                      </span>
+                    </div>
+                    <div className="status-item">
+                      <span className="lbl">Active alarms</span>
+                      <span className={`tag ${loc.alarms.length > 0 ? 'bad' : 'good'}`}>
+                        {loc.alarms.length} open
+                      </span>
+                    </div>
+                    <div className="status-item">
+                      <span className="lbl">Incidents</span>
+                      <span className="tag neutral">{loc.incidents} reported</span>
+                    </div>
+                    <div className="status-item">
+                      <span className="lbl">Level of service</span>
+                      <span className={`tag ${loc.los === 'A' || loc.los === 'B' ? 'good' : 'warn'}`}>
+                        LOS {loc.los}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="panel-title" style={{ marginBottom: '2px' }}>Equipment Health</div>
-                <div className="equip-list">
-                  <div className="equip-row">
-                    <div className="name"><span className="sw good"></span>CCTV Cameras</div>
-                    <div className="count"><b>{loc.equipment.cctv[0]}</b> / {loc.equipment.cctv[1]}</div>
-                  </div>
-                  <div className="equip-row">
-                    <div className="name"><span className="sw good"></span>AVDS Detectors</div>
-                    <div className="count"><b>{loc.equipment.avds[0]}</b> / {loc.equipment.avds[1]}</div>
-                  </div>
-                  <div className="equip-row">
-                    <div className="name"><span className="sw good"></span>LCS Signs</div>
-                    <div className="count"><b>{loc.equipment.lcs[0]}</b> / {loc.equipment.lcs[1]}</div>
-                  </div>
-                  <div className="equip-row">
-                    <div className="name"><span className="sw good"></span>Entry/Exit VMS (Standard)</div>
-                    <div className="count"><b>{loc.equipment.vms ? loc.equipment.vms[0] : 2}</b> / {loc.equipment.vms ? loc.equipment.vms[1] : 2}</div>
-                  </div>
-                  <div className="equip-row">
-                    <div className="name"><span className="sw good"></span>Mini VMS (Intermediate)</div>
-                    <div className="count"><b>{loc.equipment.miniVms ? loc.equipment.miniVms[0] : 2}</b> / {loc.equipment.miniVms ? loc.equipment.miniVms[1] : 2}</div>
+                <div className="panel ov-right-sub">
+                  <div className="panel-title">Equipment Health</div>
+                  <div className="equip-list">
+                    {[
+                      { name: 'CCTV Cameras', val: loc.equipment.cctv },
+                      { name: 'AVDS Detectors', val: loc.equipment.avds },
+                      { name: 'LCS Signs', val: loc.equipment.lcs },
+                      { name: 'Entry/Exit VMS', val: loc.equipment.vms || [2, 2] },
+                      { name: 'Mini VMS', val: loc.equipment.miniVms || [2, 2] },
+                    ].map((eq, i) => {
+                      const pct = Math.round((eq.val[0] / eq.val[1]) * 100);
+                      return (
+                        <div key={i} className="equip-row-bar">
+                          <div className="equip-bar-top">
+                            <span className="equip-bar-name">{eq.name}</span>
+                            <span className="equip-bar-count"><b>{eq.val[0]}</b>/{eq.val[1]}</span>
+                          </div>
+                          <div className="equip-bar-track">
+                            <div
+                              className="equip-bar-fill"
+                              style={{
+                                width: `${pct}%`,
+                                background: pct === 100 ? 'var(--accent)' : pct > 60 ? 'var(--amber)' : 'var(--red)'
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* BOTTOM ROW: Dynamic Standard VMS & Mini VMS Display Modules */}
-            <div className="bottom-row">
-              <div className="vms-modules-container">
-                {/* 1. ENTRY & EXIT VMS (Standard Panels) */}
-                <div className="vms-group-box">
-                  <div className="vms-group-title">
-                    <span>📡 Entry &amp; Exit VMS (Standard)</span>
-                    <button
-                      className="mini-edit-btn"
-                      onClick={() => handleOpenVmsEditor('vms')}
-                    >
-                      ✏️ Edit VMS Templates
-                    </button>
-                  </div>
-                  <div className="vms-boards-wrap">
-                    {(loc.vms || []).map((b) => {
-                      const tpl = getDynamicVmsMessage(b, loc.phase || 0);
+            {/* ── BOTTOM ROW (5 compact panels) ───────────────────── */}
+            <div className="ov-bottom-row">
 
-                      return (
-                        <div
-                          key={b.id || b.km}
-                          className="vms-board standard-vms"
-                          onClick={() => handleOpenVmsEditor('vms')}
-                          title="Click to edit VMS message template"
-                        >
-                          <div className="vms-badge">{b.type}</div>
-                          <div className="vms-msg">{tpl.msg}</div>
-                          <div className="vms-msg small">{tpl.msg2}</div>
-                          <div className="vms-footer">
-                            <span className={`vms-health ${b.status ? b.status.toLowerCase() : 'good'}`}>● {b.status || 'Good'}</span>
-                            <span className="km-tag">{b.km}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 2. MINI VMS (Intermediate Panels) */}
-                <div className="vms-group-box">
-                  <div className="vms-group-title">
-                    <span>📱 Mini VMS (Intermediate)</span>
-                    <button
-                      className="mini-edit-btn"
-                      onClick={() => handleOpenVmsEditor('miniVms')}
-                    >
-                      ✏️ Edit Mini VMS Templates
-                    </button>
-                  </div>
-                  <div className="vms-boards-wrap">
-                    {(loc.miniVms || []).map((mb) => {
-                      const tpl = getDynamicVmsMessage(mb, loc.phase || 0);
-
-                      return (
-                        <div
-                          key={mb.id || mb.km}
-                          className="vms-board mini-vms"
-                          onClick={() => handleOpenVmsEditor('miniVms')}
-                          title="Click to edit Mini VMS message template"
-                        >
-                          <div className="vms-badge mini">Mini VMS</div>
-                          <div className="vms-msg">{tpl.msg}</div>
-                          <div className="vms-msg small">{tpl.msg2}</div>
-                          <div className="vms-footer">
-                            <span className={`vms-health ${mb.status ? mb.status.toLowerCase() : 'good'}`}>● {mb.status || 'Good'}</span>
-                            <span className="km-tag">{mb.km}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="cctv-panel-container">
-                <div className="cctv-panel-header">LIVE CAMERAS</div>
-                <div className="cctv-grid">
+              {/* 1. Live Cameras */}
+              <div className="panel ov-bot-panel">
+                <div className="compact-panel-title">📷 Live Cameras</div>
+                <div className="cctv-grid compact">
                   {(loc.cctv || []).map((cam, idx) => (
                     <div key={idx} className="cctv-tile">
                       <svg className="cctv-road-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -642,9 +592,75 @@ export default function LocationScreen({
                   ))}
                 </div>
               </div>
+
+              {/* 2. Operations Summary */}
+              <div className="panel ov-bot-panel">
+                <div className="compact-panel-title">📋 Ops Summary</div>
+                <div className="ops-summary-list">
+                  {[
+                    { label: 'Phase 1 Pre-Act.', val: loc.timestamps?.p1PreActivation || '—' },
+                    { label: 'Phase 2 Open',     val: loc.timestamps?.p2Activation    || '—' },
+                    { label: 'Phase 3 Warning',  val: loc.timestamps?.p3PreDeactivation || '—' },
+                    { label: 'Phase 4 Closed',   val: loc.timestamps?.p4Deactivation  || '—' },
+                    { label: 'Current Mode',     val: (loc.mode || 'manual').toUpperCase() },
+                    { label: 'Next Scheduled',   val: loc.nextRun || '—' },
+                    { label: 'Session Start',    val: loc.ps || '—' },
+                    { label: 'Session End',      val: loc.pe || '—' },
+                  ].map((row, i) => (
+                    <div key={i} className="ops-summary-row">
+                      <span className="ops-summary-lbl">{row.label}</span>
+                      <span className="ops-summary-val">{row.val}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+
+              {/* 4. VMS Panels */}
+              <div className="panel ov-bot-panel">
+                <div className="compact-panel-title">
+                  <span>📡 VMS Panels</span>
+                  <button className="mini-edit-btn" onClick={() => handleOpenVmsEditor('vms')}>✏️ Edit</button>
+                </div>
+                <div className="vms-boards-wrap compact">
+                  {(loc.vms || []).concat(loc.miniVms || []).map((b) => {
+                    const tpl = getDynamicVmsMessage(b, loc.phase || 0);
+                    return (
+                      <div
+                        key={b.id || b.km}
+                        className="vms-board compact-vms"
+                        onClick={() => handleOpenVmsEditor(b.type === 'Mini VMS' ? 'miniVms' : 'vms')}
+                        title="Click to edit VMS message template"
+                      >
+                        <div className="vms-badge">{b.type || 'VMS'}</div>
+                        <div className="vms-msg">{tpl.msg}</div>
+                        <div className="vms-footer">
+                          <span className={`vms-health ${b.status ? b.status.toLowerCase() : 'good'}`}>● {b.status || 'Good'}</span>
+                          <span className="km-tag">{b.km}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 5. Audit Trail Feed */}
+              <div className="panel ov-bot-panel">
+                <div className="compact-panel-title">🛡️ Audit Trail</div>
+                <AuditLogDisplay
+                  auditLogs={auditLogs}
+                  locations={locations}
+                  user={user}
+                  onShowToast={onShowToast}
+                  currentLocationFilter={loc.name}
+                  compact={true}
+                />
+              </div>
+
             </div>
           </div>
         )}
+
 
         {/* VMS CONTROL & EDITOR TAB */}
         {activeTab === 'vms' && (
@@ -664,47 +680,13 @@ export default function LocationScreen({
         {/* LOG TAB */}
         {activeTab === 'log' && (
           <div className="tab-panel active">
-            <div className="log-grid">
-              <div className="filter-chips">
-                {['all', 'critical', 'warning', 'operation'].map(f => (
-                  <div
-                    key={f}
-                    className={`fchip ${logFilter === f ? 'on' : ''}`}
-                    onClick={() => setLogFilter(f)}
-                  >
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
-                  </div>
-                ))}
-              </div>
-
-              <div className="log-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Severity</th>
-                      <th>Module</th>
-                      <th>Event</th>
-                      <th>User</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredLogs.map((l, idx) => (
-                      <tr key={idx}>
-                        <td>{l.time}</td>
-                        <td>
-                          <span className={`sev-dot ${l.sev === 'critical' ? 'crit' : 'warn'}`}></span>
-                          {l.sev.toUpperCase()}
-                        </td>
-                        <td>{l.mod}</td>
-                        <td>{l.event}</td>
-                        <td>{l.user}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <AuditLogDisplay
+              auditLogs={auditLogs}
+              locations={locations}
+              user={user}
+              onShowToast={onShowToast}
+              currentLocationFilter={loc.name}
+            />
           </div>
         )}
 
