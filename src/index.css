@@ -271,10 +271,25 @@ button {
   font-size: 16px;
 }
 
-.stat-icon.icon-blue { background: var(--brand-dim); color: var(--brand); }
-.stat-icon.icon-green { background: var(--green-dim); color: var(--green); }
-.stat-icon.icon-amber { background: var(--amber-dim); color: var(--amber); }
-.stat-icon.icon-red { background: var(--red-dim); color: var(--red); }
+.stat-icon.icon-blue {
+  background: var(--brand-dim);
+  color: var(--brand);
+}
+
+.stat-icon.icon-green {
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.stat-icon.icon-amber {
+  background: var(--amber-dim);
+  color: var(--amber);
+}
+
+.stat-icon.icon-red {
+  background: var(--red-dim);
+  color: var(--red);
+}
 
 .stat-info {
   display: flex;
@@ -323,8 +338,16 @@ button {
   height: 6px;
   border-radius: 50%;
 }
-.banner-indicator.crit { background: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
-.banner-indicator.warn { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-dim); }
+
+.banner-indicator.crit {
+  background: var(--red);
+  box-shadow: 0 0 0 3px var(--red-dim);
+}
+
+.banner-indicator.warn {
+  background: var(--amber);
+  box-shadow: 0 0 0 3px var(--amber-dim);
+}
 
 .banner-content {
   display: flex;
@@ -377,9 +400,18 @@ button {
   bottom: 0;
   width: 4px;
 }
-.loc-accent-stripe.is-active { background: var(--accent); }
-.loc-accent-stripe.is-pending { background: var(--amber); }
-.loc-accent-stripe.is-inactive { background: transparent; }
+
+.loc-accent-stripe.is-active {
+  background: var(--accent);
+}
+
+.loc-accent-stripe.is-pending {
+  background: var(--amber);
+}
+
+.loc-accent-stripe.is-inactive {
+  background: transparent;
+}
 
 .row-col-name {
   display: flex;
@@ -990,62 +1022,184 @@ button {
 .tab-panel.active {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  height: calc(100vh - 105px);
+  max-height: calc(100vh - 105px);
+  overflow: hidden;
+  padding: 8px 12px;
+  gap: 8px;
 }
 
-.tab-panel.active .ov-grid {
-  /* top section fills available space minus bottom row height */
-  flex: 1;
-  min-height: 0;
-}
-
-.tab-panel.active .ov-bottom-row {
-  flex-shrink: 0;
-}
-
-
-/* ---- overview tab layout ---- */
-.ov-grid {
+/* ═══════════════════════════════════════════════════════
+   OVERVIEW — 2-COLUMN VIEWPORT-FIT LAYOUT
+   Left Column: Operation Control + System Status/Health + Audit Log
+   Right Column: Live Schematic + VMS Boards + Live Cameras (CCTV)
+═══════════════════════════════════════════════════════ */
+.ov-wrapper {
   display: grid;
-  grid-template-columns: 268px 1fr 264px;
+  grid-template-columns: 310px 1fr;
   gap: 10px;
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
-/* right column stacks two panels vertically */
-.ov-right-stack {
+/* Left Sidebar */
+.ov-left-col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding-right: 2px;
+}
+
+.ov-left-col .panel {
+  flex-shrink: 0;
+  padding: 10px 12px;
+}
+
+.ov-left-col .panel.ov-audit-panel {
+  flex: 1;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Right Main Area */
+.ov-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ov-right-col .schematic-wrap {
+  flex: 1.4;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.ov-vms-row {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ov-vms-panel {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ov-vms-panel .vms-boards-wrap {
+  display: flex;
+  gap: 8px;
+  flex: 1;
   min-height: 0;
 }
 
-.ov-right-sub {
+.ov-vms-panel .vms-board {
+  flex: 1;
+  min-width: 120px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ov-vms-panel .vms-board .vms-msg {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+}
+
+/* CCTV Bottom Strip — enlarged camera cards */
+.ov-cctv-strip {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.cctv-strip-grid {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+
+.cctv-strip-grid .cctv-tile {
+  flex: 1;
+  min-width: 95px;
+  height: 100%;
+  min-height: 85px;
+  aspect-ratio: auto;
+  border-radius: 8px;
+}
+
+.cctv-strip-grid .cctv-tile .cam-name {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+
+
+/* compact panel header used across overview */
+.compact-panel-title {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 /* equip health with animated fill bars */
 .equip-row-bar {
-  margin-bottom: 9px;
+  margin-bottom: 6px;
 }
 
 .equip-bar-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .equip-bar-name {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--text-dim);
 }
 
 .equip-bar-count {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 10px;
   color: var(--text-faint);
 }
 
@@ -1054,7 +1208,7 @@ button {
 }
 
 .equip-bar-track {
-  height: 5px;
+  height: 4px;
   background: var(--surface-2);
   border-radius: 3px;
   overflow: hidden;
@@ -1065,6 +1219,7 @@ button {
   border-radius: 3px;
   transition: width 0.6s ease;
 }
+
 
 /* ---- bottom row: 4 compact panels ---- */
 .ov-bottom-row {
@@ -1678,7 +1833,7 @@ button {
   display: flex;
   justify-content: space-between;
   gap: 4px;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 
 .lcs-tile {
@@ -1686,8 +1841,8 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px 2px;
+  gap: 2px;
+  padding: 4px 2px;
   border-radius: 8px;
   border: 2px solid var(--red);
   background: var(--red-dim);
@@ -1705,7 +1860,7 @@ button {
 }
 
 .lcs-tile .sym {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   color: var(--red);
 }
@@ -1724,16 +1879,16 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .activate-all {
-  padding: 5px 10px;
-  border-radius: 7px;
+  padding: 3px 8px;
+  border-radius: 6px;
   background: var(--brand-dim);
   color: #7FC0FA;
   border: 1px solid rgba(30, 136, 229, .4);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -1744,20 +1899,48 @@ button {
 .traffic-strip {
   display: flex;
   gap: 6px;
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .tcard {
   flex: 1;
   background: var(--surface-2);
   border: 1px solid var(--line-soft);
-  border-radius: 8px;
-  padding: 7px 6px;
+  border-radius: 6px;
+  padding: 4px 6px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  justify-content: center;
+  gap: 1px;
+}
+
+.tcard .km {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 2px;
+  margin-bottom: 2px;
+}
+
+.tcard .metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.tcard .metric span {
+  color: var(--text-faint);
+  font-size: 9.5px;
+}
+
+.tcard .metric b {
+  color: var(--text);
+  font-weight: 600;
 }
 
 .tcard .km {
@@ -2155,10 +2338,22 @@ button {
   font-family: var(--font-mono);
   font-weight: 600;
 }
-.vms-health.good { color: var(--green); }
-.vms-health.warning { color: var(--amber); }
-.vms-health.degraded { color: var(--amber); }
-.vms-health.offline { color: var(--red); }
+
+.vms-health.good {
+  color: var(--green);
+}
+
+.vms-health.warning {
+  color: var(--amber);
+}
+
+.vms-health.degraded {
+  color: var(--amber);
+}
+
+.vms-health.offline {
+  color: var(--red);
+}
 
 .vms-board .km-tag {
   font-size: 8.5px;
@@ -2657,21 +2852,30 @@ button {
   color: var(--amber);
   border: 1px solid rgba(245, 165, 36, 0.4);
 }
-.cal-exc-chip.public-holiday .dot { background: var(--amber); }
+
+.cal-exc-chip.public-holiday .dot {
+  background: var(--amber);
+}
 
 .cal-exc-chip.special-exception {
   background: rgba(47, 224, 196, 0.2);
   color: var(--accent);
   border: 1px solid rgba(47, 224, 196, 0.4);
 }
-.cal-exc-chip.special-exception .dot { background: var(--accent); }
+
+.cal-exc-chip.special-exception .dot {
+  background: var(--accent);
+}
 
 .cal-exc-chip.recurring-exception {
   background: rgba(30, 136, 229, 0.2);
   color: #7FC0FA;
   border: 1px solid rgba(30, 136, 229, 0.4);
 }
-.cal-exc-chip.recurring-exception .dot { background: var(--brand); }
+
+.cal-exc-chip.recurring-exception .dot {
+  background: var(--brand);
+}
 
 .exc-card-item {
   display: flex;
@@ -3742,8 +3946,15 @@ button {
 }
 
 @keyframes fadeInModal {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .cctv-modal-wrap {
@@ -3801,8 +4012,15 @@ button {
 }
 
 @keyframes pulse-rec {
-  from { opacity: 0.4; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1.1); }
+  from {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.1);
+  }
 }
 
 .cctv-policy-banner .policy-note {
@@ -3880,7 +4098,7 @@ button {
 
 .cctv-cam-id {
   color: #fff;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   font-weight: 600;
 }
 
@@ -3901,8 +4119,8 @@ button {
   justify-content: space-between;
   font-family: var(--font-mono);
   font-size: 10px;
-  color: rgba(255,255,255,0.8);
-  text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   pointer-events: none;
 }
 
@@ -4069,18 +4287,33 @@ button {
 }
 
 @keyframes move-car-1 {
-  from { transform: translateY(0); }
-  to { transform: translateY(80px); }
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(80px);
+  }
 }
 
 @keyframes move-car-2 {
-  from { transform: translateY(0); }
-  to { transform: translateY(60px); }
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(60px);
+  }
 }
 
 @keyframes move-car-3 {
-  from { transform: translateY(0); }
-  to { transform: translateY(50px); }
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(50px);
+  }
 }
 
 /* ==========================================================================
@@ -4597,7 +4830,8 @@ button {
   gap: 4px;
 }
 
-.btn-page, .btn-page-num {
+.btn-page,
+.btn-page-num {
   padding: 5px 10px;
   background: var(--card);
   border: 1px solid var(--line);
@@ -4607,7 +4841,8 @@ button {
   cursor: pointer;
 }
 
-.btn-page:hover:not(:disabled), .btn-page-num:hover {
+.btn-page:hover:not(:disabled),
+.btn-page-num:hover {
   background: var(--card-hover);
   color: var(--text);
 }
@@ -4650,8 +4885,15 @@ button {
 }
 
 @keyframes modal-appear {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .modal-header {
