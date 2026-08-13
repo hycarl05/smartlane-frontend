@@ -4,6 +4,7 @@ import Schedule from './Schedule';
 import VmsEditor, { VmsEditorSection, DEFAULT_ROLE_TEMPLATES, getDynamicVmsMessage } from './VmsEditor';
 import CctvModal from './CctvModal';
 import AuditLogDisplay from './AuditLogDisplay';
+import RoadLayoutDesigner from './RoadLayoutDesigner';
 import {
   fmtElapsed,
   SCHEDULE_ITEMS,
@@ -238,13 +239,19 @@ export default function LocationScreen({
       </div>
 
       <div className="tabbar">
-        {['overview', 'vms', 'schedule', 'log', 'reports', 'settings'].map(tabKey => (
+        {['overview', 'vms', 'designer', 'schedule', 'log', 'reports', 'settings'].map(tabKey => (
           <button
             key={tabKey}
             className={`tab-btn ${activeTab === tabKey ? 'active' : ''}`}
             onClick={() => setActiveTab(tabKey)}
           >
-            {tabKey === 'vms' ? '📺 VMS Control & Editor' : tabKey === 'log' ? 'Alarms & Log' : tabKey.charAt(0).toUpperCase() + tabKey.slice(1)}
+            {tabKey === 'vms'
+              ? '📺 VMS Control & Editor'
+              : tabKey === 'designer'
+              ? '🎨 Road Layout Designer'
+              : tabKey === 'log'
+              ? 'Alarms & Log'
+              : tabKey.charAt(0).toUpperCase() + tabKey.slice(1)}
             {tabKey === 'log' && loc.alarms.length > 0 && (
               <span className="badge">{loc.alarms.length}</span>
             )}
@@ -648,6 +655,20 @@ export default function LocationScreen({
             onUpdateLoc={onUpdateLoc}
             onShowToast={onShowToast}
           />
+        )}
+
+        {/* ROAD LAYOUT DESIGNER TAB */}
+        {activeTab === 'designer' && (
+          <div className="tab-panel active" style={{ padding: 0, height: 'calc(100vh - 120px)' }}>
+            <RoadLayoutDesigner
+              initialLoc={loc}
+              onSaveLayout={(updatedLoc) => {
+                onUpdateLoc(loc.id, updatedLoc);
+                addLogEntry('operation', `Road path and equipment layout re-configured for ${updatedLoc.name}`);
+              }}
+              onShowToast={onShowToast}
+            />
+          </div>
         )}
 
         {/* SCHEDULE TAB */}

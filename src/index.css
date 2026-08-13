@@ -5308,3 +5308,438 @@ button {
   font-size: 12px;
   color: var(--text-dim);
 }
+
+/* ==========================================================================
+   ROAD LAYOUT DESIGNER STYLES
+   ========================================================================== */
+.layout-designer-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  background: var(--canvas-bg, #F4F6FC);
+  color: var(--text, #0F1729);
+  font-family: var(--font-body, 'Inter', sans-serif);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.designer-topbar {
+  height: 56px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 22px;
+  background: var(--surface, #FFFFFF);
+  border-bottom: 1px solid var(--border, #E2E7F2);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(16,24,40,.06));
+  z-index: 5;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.designer-close-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #CBD4E8);
+  background: var(--surface-2, #EEF2FA);
+  color: var(--text-dim, #525C74);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: .15s;
+}
+
+.designer-close-btn:hover {
+  background: #E2E8F0;
+  color: var(--text, #0F1729);
+}
+
+.designer-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 270px 1fr 310px;
+  gap: 14px;
+  padding: 16px 20px;
+  min-height: 0;
+}
+
+.designer-panel-left,
+.designer-panel-right {
+  background: var(--surface, #FFFFFF);
+  border: 1px solid var(--border, #E2E7F2);
+  border-radius: var(--radius, 14px);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(16,24,40,.06));
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.panel-title {
+  font-family: var(--font-display, 'Manrope', sans-serif);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-dim, #525C74);
+  margin-bottom: 12px;
+}
+
+.step-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border, #E2E7F2);
+  background: var(--surface-2, #EEF2FA);
+  color: var(--text-dim, #525C74);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  transition: .15s;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.step-btn .n {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface-3, #E4EAF7);
+  color: var(--text-faint, #8B93A8);
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.step-btn.on {
+  border-color: var(--brand, #2563EB);
+  background: var(--brand-tint, #DBEAFE);
+  color: var(--brand, #2563EB);
+}
+
+.step-btn.on .n {
+  background: var(--brand, #2563EB);
+  color: #ffffff;
+}
+
+.step-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.step-btn:hover:not(:disabled) {
+  border-color: var(--border-strong, #CBD4E8);
+}
+
+.hint {
+  font-size: 10.5px;
+  color: var(--text-faint, #8B93A8);
+  line-height: 1.5;
+  margin: -2px 0 12px;
+}
+
+.palette {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.pal-btn {
+  padding: 10px 6px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border, #E2E7F2);
+  background: var(--surface-2, #EEF2FA);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-dim, #525C74);
+  transition: .15s;
+  cursor: pointer;
+}
+
+.pal-btn .ic {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.pal-btn[data-type="CCTV"] .ic { background: #2563EB; }
+.pal-btn[data-type="AVDS"] .ic { background: #7C3AED; }
+.pal-btn[data-type="LCS"] .ic { background: #DC2626; }
+.pal-btn[data-type="VMS"] .ic { background: #B45309; }
+
+.pal-btn.armed {
+  border-color: var(--flow, #0D9488);
+  background: var(--flow-tint, #CCFBF1);
+  color: var(--flow, #0D9488);
+}
+
+.pal-btn:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.util-row {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--surface-2, #EEF2FA);
+}
+
+.util-btn {
+  flex: 1;
+  padding: 9px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #E2E7F2);
+  background: var(--surface, #FFFFFF);
+  color: var(--text-dim, #525C74);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.util-btn:hover {
+  background: var(--surface-2, #EEF2FA);
+}
+
+.util-btn.danger:hover {
+  background: #FEE2E2;
+  color: #DC2626;
+  border-color: transparent;
+}
+
+/* Canvas Stage Panel */
+.canvas-panel {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface, #FFFFFF);
+  border: 1px solid var(--border, #E2E7F2);
+  border-radius: var(--radius, 14px);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(16,24,40,.06));
+}
+
+.canvas-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border, #E2E7F2);
+}
+
+.canvas-head .ct {
+  font-family: var(--font-display, 'Manrope', sans-serif);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.canvas-head .cs {
+  font-size: 11px;
+  color: var(--text-faint, #8B93A8);
+  margin-top: 2px;
+}
+
+.mode-flag {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: var(--surface-2, #EEF2FA);
+  color: var(--text-faint, #8B93A8);
+}
+
+.mode-flag.drawing {
+  background: var(--brand-tint, #DBEAFE);
+  color: var(--brand, #2563EB);
+}
+
+.mode-flag.placing {
+  background: var(--flow-tint, #CCFBF1);
+  color: var(--flow, #0D9488);
+}
+
+.canvas-stage {
+  flex: 1;
+  position: relative;
+  background:
+    linear-gradient(90deg, rgba(203,212,232,.35) 1px, transparent 1px) 0 0/28px 28px,
+    linear-gradient(0deg, rgba(203,212,232,.35) 1px, transparent 1px) 0 0/28px 28px,
+    #FAFBFE;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#layoutCanvas {
+  display: block;
+}
+
+/* Right Stack Equipment List & JSON */
+.eq-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+.eq-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  background: var(--surface-2, #EEF2FA);
+  border-radius: 9px;
+  border: 1px solid var(--border, #E2E7F2);
+}
+
+.eq-item .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.eq-item .body {
+  flex: 1;
+  min-width: 0;
+}
+
+.eq-item .t1 {
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.eq-item .t2 {
+  font-size: 10px;
+  color: var(--text-faint, #8B93A8);
+  font-family: var(--font-mono, monospace);
+}
+
+.eq-item .del {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint, #8B93A8);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.eq-item .del:hover {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.eq-empty {
+  color: var(--text-faint, #8B93A8);
+  font-size: 11.5px;
+  padding: 16px 6px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.json-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border, #E2E7F2);
+}
+
+.json-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding-bottom: 6px;
+}
+
+.json-toggle .arrow {
+  transition: .15s;
+  font-size: 10px;
+  color: var(--text-faint, #8B93A8);
+}
+
+.json-box {
+  background: #0F1729;
+  border-radius: 10px;
+  padding: 10px 12px;
+  max-height: 180px;
+  overflow: auto;
+  margin-bottom: 8px;
+}
+
+.json-box pre {
+  color: #B9E6DD;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.save-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 9px;
+  background: var(--flow, #0D9488);
+  color: #fff;
+  border: none;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+  transition: .15s;
+}
+
+.save-btn:hover {
+  background: #0B7A6E;
+}
+
+/* Modal Overlay for Road Layout Designer when launched from Overview/Location */
+.designer-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 41, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.designer-modal-content {
+  width: 100%;
+  max-width: 1400px;
+  height: 92vh;
+  background: var(--canvas-bg, #F4F6FC);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}

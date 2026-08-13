@@ -182,6 +182,24 @@ export default function App() {
     }
   };
 
+  const handleSaveNewLocation = (newLocObj) => {
+    setLocations(prevLocs => {
+      const exists = prevLocs.find(l => l.id === newLocObj.id);
+      if (exists) {
+        return prevLocs.map(l => (l.id === newLocObj.id ? { ...l, ...newLocObj } : l));
+      }
+      return [...prevLocs, newLocObj];
+    });
+    addAuditLog(
+      'Layout Designer',
+      `New road path and equipment layout configured for ${newLocObj.name}`,
+      newLocObj.name,
+      `LOC-${(newLocObj.id || 'NEW').toUpperCase()}`,
+      'Success'
+    );
+    triggerToast(`Saved road layout for ${newLocObj.name}`);
+  };
+
   // If user is not authenticated, show LoginScreen
   if (!user) {
     return (
@@ -208,6 +226,7 @@ export default function App() {
           date={clockDate}
           user={user}
           onLogout={handleLogout}
+          onSaveNewLocation={handleSaveNewLocation}
           onShowToast={triggerToast}
         />
       ) : (

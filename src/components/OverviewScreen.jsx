@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Topbar from './Topbar';
+import RoadLayoutDesigner from './RoadLayoutDesigner';
 import { fmtElapsed } from '../data';
 
-export default function OverviewScreen({ locations, onSelectLocation, time, date, user, onLogout }) {
+export default function OverviewScreen({ locations, onSelectLocation, time, date, user, onLogout, onSaveNewLocation, onShowToast }) {
+  const [showDesignerModal, setShowDesignerModal] = useState(false);
   const activeCount = locations.filter(l => l.status === 'active').length;
   const pendingCount = locations.filter(l => l.status === 'pending').length;
   const totalAlarms = locations.reduce((sum, l) => sum + l.alarms.length, 0);
@@ -23,6 +25,27 @@ export default function OverviewScreen({ locations, onSelectLocation, time, date
           <div className="overview-title">All Smartlane Locations</div>
           <div className="overview-sub">Select a location to open its live dashboard and controls</div>
         </div>
+        <button
+          className="create-layout-btn"
+          onClick={() => setShowDesignerModal(true)}
+          style={{
+            marginLeft: 'auto',
+            padding: '10px 18px',
+            borderRadius: '10px',
+            background: 'linear-gradient(135deg, var(--brand), #1447B8)',
+            color: '#fff',
+            border: 'none',
+            fontWeight: '700',
+            fontSize: '12.5px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            cursor: 'pointer',
+            boxShadow: 'var(--shadow-sm)'
+          }}
+        >
+          <span>🎨</span> Draw New Road Layout
+        </button>
       </div>
 
       <div className="overview-body-full">
@@ -156,6 +179,22 @@ export default function OverviewScreen({ locations, onSelectLocation, time, date
           })}
         </div>
       </div>
+
+      {/* ROAD LAYOUT DESIGNER MODAL */}
+      {showDesignerModal && (
+        <div className="designer-modal-overlay">
+          <div className="designer-modal-content">
+            <RoadLayoutDesigner
+              onSaveLayout={(newLoc) => {
+                if (onSaveNewLocation) onSaveNewLocation(newLoc);
+                setShowDesignerModal(false);
+              }}
+              onClose={() => setShowDesignerModal(false)}
+              onShowToast={onShowToast}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
