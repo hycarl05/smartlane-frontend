@@ -324,48 +324,32 @@ export default function LocationScreen({
                     </div>
                   </div>
 
-                  {/* ACTION CONTROLS */}
+                  {/* ACTION CONTROLS — Single sequential button for current phase step */}
                   <div className="phase-actions-group">
-                    {(!isActive && (loc.phase === 0 || !loc.phase || loc.phase === 5)) && (
-                      <div className="phase-btn-row">
-                        <button className="primary-toggle to-activate" onClick={handleStartPhase1}>
-                          ▶ START PHASE 1 (PRE-ACTIVATION CYCLE)
-                        </button>
-                        <button className="mini-btn good-btn" onClick={handleStartPhase2Now}>
-                          ⚡ Direct Open (Phase 2)
-                        </button>
-                      </div>
+                    {(!isActive && (loc.phase === 0 || !loc.phase)) && (
+                      <button className="primary-toggle to-activate" onClick={handleStartPhase1}>
+                        ▶ INITIATE PHASE 1 (PRE-ACTIVATION WARNING)
+                      </button>
                     )}
                     {loc.phase === 1 && (
-                      <div className="phase-btn-row">
-                        <button className="primary-toggle to-activate" onClick={handleStartPhase2Now}>
-                          ✅ CONFIRM PHASE 2 (OPEN EMERGENCY LANE NOW)
-                        </button>
-                      </div>
+                      <button className="primary-toggle to-activate" onClick={handleStartPhase2Now}>
+                        ✅ CONFIRM PHASE 2 (OPEN EMERGENCY LANE)
+                      </button>
                     )}
                     {loc.phase === 2 && (
-                      <div className="phase-btn-row">
-                        <button className="primary-toggle to-deactivate" onClick={handleStartPhase3Deactivation}>
-                          ⚠️ INITIATE PHASE 3 (PRE-DEACTIVATION WARNING)
-                        </button>
-                        <button className="mini-btn bad-btn" onClick={handleDeactivatePhase4And5}>
-                          🛑 Immediate Close (Phase 4)
-                        </button>
-                      </div>
+                      <button className="primary-toggle to-deactivate" onClick={handleStartPhase3Deactivation}>
+                        ⚠️ INITIATE PHASE 3 (PRE-DEACTIVATION WARNING)
+                      </button>
                     )}
                     {loc.phase === 3 && (
-                      <div className="phase-btn-row">
-                        <button className="primary-toggle to-deactivate" onClick={handleDeactivatePhase4And5}>
-                          🛑 CONFIRM PHASE 4 (CLOSE EMERGENCY LANE NOW)
-                        </button>
-                      </div>
+                      <button className="primary-toggle to-deactivate" onClick={handleDeactivatePhase4And5}>
+                        🛑 CONFIRM PHASE 4 (CLOSE EMERGENCY LANE)
+                      </button>
                     )}
                     {loc.phase === 5 && (
-                      <div className="phase-btn-row">
-                        <button className="mini-btn neutral-btn" onClick={() => onShowToast('Compiling Smart Lane Activation Report...')}>
-                          📄 Compile Phase 5 Activation Report
-                        </button>
-                      </div>
+                      <button className="mini-btn neutral-btn" style={{ width: '100%' }} onClick={() => onShowToast('Compiling Smart Lane Activation Report...')}>
+                        📄 Compile Phase 5 Activation Report
+                      </button>
                     )}
                   </div>
 
@@ -410,18 +394,6 @@ export default function LocationScreen({
                     >
                       <div className="knob"></div>
                     </div>
-                  </div>
-
-                  <div className="mode-chips">
-                    {['manual', 'scheduled', 'automated'].map(m => (
-                      <div
-                        key={m}
-                        className={`mode-chip ${loc.mode === m ? 'on' : ''}`}
-                        onClick={() => handleSetMode(m)}
-                      >
-                        {m.charAt(0).toUpperCase() + m.slice(1)}
-                      </div>
-                    ))}
                   </div>
 
                   <div className="next-run">
