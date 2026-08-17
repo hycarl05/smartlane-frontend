@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import Topbar from './Topbar';
 import RoadLayoutDesigner from './RoadLayoutDesigner';
+import MapView from './MapView';
 import { fmtElapsed } from '../data';
 
 export default function OverviewScreen({ locations, onSelectLocation, time, date, user, onLogout, onSaveNewLocation, onShowToast }) {
   const [showDesignerModal, setShowDesignerModal] = useState(false);
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
   const activeCount = locations.filter(l => l.status === 'active').length;
   const pendingCount = locations.filter(l => l.status === 'pending').length;
   const totalAlarms = locations.reduce((sum, l) => sum + l.alarms.length, 0);
@@ -25,27 +27,61 @@ export default function OverviewScreen({ locations, onSelectLocation, time, date
           <div className="overview-title">All Smartlane Locations</div>
           <div className="overview-sub">Select a location to open its live dashboard and controls</div>
         </div>
-        <button
-          className="create-layout-btn"
-          onClick={() => setShowDesignerModal(true)}
-          style={{
-            marginLeft: 'auto',
-            padding: '10px 18px',
-            borderRadius: '10px',
-            background: 'linear-gradient(135deg, var(--brand), #1447B8)',
-            color: '#fff',
-            border: 'none',
-            fontWeight: '700',
-            fontSize: '12.5px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer',
-            boxShadow: 'var(--shadow-sm)'
-          }}
-        >
-          <span>🎨</span> Draw New Road Layout
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', background: 'var(--panel-bg, #1e293b)', padding: '3px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <button
+              onClick={() => setViewMode('list')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                background: viewMode === 'list' ? 'var(--brand, #2563eb)' : 'transparent',
+                color: '#fff',
+                fontWeight: '600',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              📋 List View
+            </button>
+            <button
+              onClick={() => setViewMode('map')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                background: viewMode === 'map' ? 'var(--brand, #2563eb)' : 'transparent',
+                color: '#fff',
+                fontWeight: '600',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              🗺️ GIS Map View
+            </button>
+          </div>
+
+          <button
+            className="create-layout-btn"
+            onClick={() => setShowDesignerModal(true)}
+            style={{
+              padding: '10px 18px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, var(--brand), #1447B8)',
+              color: '#fff',
+              border: 'none',
+              fontWeight: '700',
+              fontSize: '12.5px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-sm)'
+            }}
+          >
+            <span>🎨</span> Draw New Road Layout
+          </button>
+        </div>
       </div>
 
       <div className="overview-body-full">
@@ -100,84 +136,98 @@ export default function OverviewScreen({ locations, onSelectLocation, time, date
           </div>
         )}
 
-        {/* FULL-WIDTH HORIZONTAL LOCATION ROWS */}
-        <div className="loc-rows-list">
-          {locations.map(loc => {
-            const cnt = loc.alarms.length;
-            const isActive = loc.status === 'active';
-            const isPending = loc.status === 'pending';
+        {/* CONTENT SWITCHER: LIST OR MAP */}
+        {viewMode === 'map' ? (
+          <div className="overview-map-container" style={{ height: 'calc(100vh - 240px)', minHeight: '500px', width: '100%', position: 'relative', marginTop: '16px' }}>
+            <MapView
+              center={[101.8, 3.5]}
+              zoom={6.8}
+              locations={locations}
+              onSelectLocation={onSelectLocation}
+              interactive={true}
+              containerStyle={{ border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
+            />
+          </div>
+        ) : (
+          /* FULL-WIDTH HORIZONTAL LOCATION ROWS */
+          <div className="loc-rows-list">
+            {locations.map(loc => {
+              const cnt = loc.alarms.length;
+              const isActive = loc.status === 'active';
+              const isPending = loc.status === 'pending';
 
-            return (
-              <div
-                key={loc.id}
-                className={`loc-row-card is-${loc.status}`}
-                onClick={() => onSelectLocation(loc.id)}
-              >
-                <div className={`loc-accent-stripe is-${loc.status}`}></div>
+              return (
+                <div
+                  key={loc.id}
+                  className={`loc-row-card is-${loc.status}`}
+                  onClick={() => onSelectLocation(loc.id)}
+                >
+                  <div className={`loc-accent-stripe is-${loc.status}`}></div>
 
-                {/* LOC NAME */}
-                <div className="row-col-name">
-                  <div className="loc-name">{loc.name}</div>
-                  <div className="loc-dir">{loc.direction}</div>
-                </div>
+                  {/* LOC NAME */}
+                  <div className="row-col-name">
+                    <div className="loc-name">{loc.name}</div>
+                    <div className="loc-dir">{loc.direction}</div>
+                  </div>
 
-                {/* CENTERED SCHEMATIC */}
-                <div className="row-col-glyph">
-                  <svg className="row-road-glyph" viewBox="0 0 220 34" preserveAspectRatio="none">
-                    <line className="track" x1="6" y1="17" x2="214" y2="17" />
-                    <line className="flow" x1="6" y1="17" x2="214" y2="17" />
-                    {[26, 66, 106, 146, 186].map(x => (
-                      <circle
-                        key={x}
-                        className={`marker ${isActive || isPending ? 'on' : ''}`}
-                        cx={x}
-                        cy="17"
-                        r="3"
-                      />
-                    ))}
-                  </svg>
-                </div>
+                  {/* CENTERED SCHEMATIC */}
+                  <div className="row-col-glyph">
+                    <svg className="row-road-glyph" viewBox="0 0 220 34" preserveAspectRatio="none">
+                      <line className="track" x1="6" y1="17" x2="214" y2="17" />
+                      <line className="flow" x1="6" y1="17" x2="214" y2="17" />
+                      {[26, 66, 106, 146, 186].map(x => (
+                        <circle
+                          key={x}
+                          className={`marker ${isActive || isPending ? 'on' : ''}`}
+                          cx={x}
+                          cy="17"
+                          r="3"
+                        />
+                      ))}
+                    </svg>
+                  </div>
 
-                {/* METRICS */}
-                <div className="row-col-metrics">
-                  <div className="loc-meta">
-                    <div className="lbl">LEVEL OF SERVICE</div>
-                    <div className={`val ${loc.los === 'A' || loc.los === 'B' ? 'good' : loc.los === 'C' || loc.los === 'D' ? 'warn' : 'crit'}`}>
-                      {loc.los}
+                  {/* METRICS */}
+                  <div className="row-col-metrics">
+                    <div className="loc-meta">
+                      <div className="lbl">LEVEL OF SERVICE</div>
+                      <div className={`val ${loc.los === 'A' || loc.los === 'B' ? 'good' : loc.los === 'C' || loc.los === 'D' ? 'warn' : 'crit'}`}>
+                        {loc.los}
+                      </div>
+                    </div>
+                    <div className="loc-meta">
+                      <div className="lbl">TRAFFIC FLOW</div>
+                      <div className="val">{loc.trafficFlow}</div>
+                    </div>
+                    <div className="loc-meta">
+                      <div className="lbl">{isActive ? 'ELAPSED' : 'NEXT RUN'}</div>
+                      <div className="val">{isActive ? fmtElapsed(loc.elapsedSeconds) : loc.nextRun}</div>
                     </div>
                   </div>
-                  <div className="loc-meta">
-                    <div className="lbl">TRAFFIC FLOW</div>
-                    <div className="val">{loc.trafficFlow}</div>
-                  </div>
-                  <div className="loc-meta">
-                    <div className="lbl">{isActive ? 'ELAPSED' : 'NEXT RUN'}</div>
-                    <div className="val">{isActive ? fmtElapsed(loc.elapsedSeconds) : loc.nextRun}</div>
+
+                  {/* STATUS & ACTIONS */}
+                  <div className="row-col-actions">
+                    <div className={`status-pill ${loc.status}`}>
+                      <span className="dot"></span>
+                      {isActive ? `ACTIVE · P${loc.phase}` : isPending ? 'ATTENTION' : 'INACTIVE'}
+                    </div>
+
+                    <div className={`alarm-tag ${cnt === 0 ? 'none' : ''}`}>
+                      <b>{cnt}</b> {cnt === 1 ? 'alarm' : 'alarms'}
+                    </div>
+
+                    <button
+                      className="open-btn"
+                      onClick={(e) => { e.stopPropagation(); onSelectLocation(loc.id); }}
+                    >
+                      Open Dashboard →
+                    </button>
                   </div>
                 </div>
-
-                {/* STATUS & ACTIONS */}
-                <div className="row-col-actions">
-                  <div className={`status-pill ${loc.status}`}>
-                    <span className="dot"></span>
-                    {isActive ? `ACTIVE · P${loc.phase}` : isPending ? 'ATTENTION' : 'INACTIVE'}
-                  </div>
-
-                  <div className={`alarm-tag ${cnt === 0 ? 'none' : ''}`}>
-                    <b>{cnt}</b> {cnt === 1 ? 'alarm' : 'alarms'}
-                  </div>
-
-                  <button
-                    className="open-btn"
-                    onClick={(e) => { e.stopPropagation(); onSelectLocation(loc.id); }}
-                  >
-                    Open Dashboard →
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ROAD LAYOUT DESIGNER MODAL */}

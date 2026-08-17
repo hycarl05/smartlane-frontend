@@ -15,6 +15,7 @@ export const INITIAL_LOCATIONS = [
     incidents: 0,
     thresholdArmed: true,
     nextRun: '—',
+    coordinates: [101.7650, 2.8910],
     equipment: { cctv: [6, 7], avds: [5, 5], lcs: [6, 6], vms: [2, 2], miniVms: [3, 3] },
     gantries: [
       { km: 'KM1.95NB', type: 'CCTV', status: 'ok' },
@@ -73,6 +74,7 @@ export const INITIAL_LOCATIONS = [
     incidents: 0,
     thresholdArmed: true,
     nextRun: '10 Aug 2026, 22:00',
+    coordinates: [103.7380, 1.5520],
     equipment: { cctv: [7, 7], avds: [5, 5], lcs: [6, 6], vms: [2, 2], miniVms: [2, 2] },
     gantries: [
       { km: 'KM22.0NB', type: 'CCTV', status: 'ok' },
@@ -126,6 +128,7 @@ export const INITIAL_LOCATIONS = [
     incidents: 0,
     thresholdArmed: false,
     nextRun: '—',
+    coordinates: [100.4900, 5.2250],
     equipment: { cctv: [5, 6], avds: [5, 5], lcs: [5, 5], vms: [2, 2], miniVms: [2, 2] },
     gantries: [
       { km: 'KM45.0NB', type: 'CCTV', status: 'ok' },
@@ -177,6 +180,7 @@ export const INITIAL_LOCATIONS = [
     incidents: 0,
     thresholdArmed: true,
     nextRun: 'Awaiting operator decision',
+    coordinates: [100.4430, 5.5120],
     equipment: { cctv: [6, 6], avds: [4, 4], lcs: [5, 5], vms: [2, 2], miniVms: [1, 1] },
     gantries: [
       { km: 'KM60.0NB', type: 'CCTV', status: 'ok' },

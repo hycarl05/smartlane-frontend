@@ -5702,6 +5702,49 @@ button {
   word-break: break-all;
 }
 
+.json-box-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.json-action-row {
+  display: flex;
+  gap: 6px;
+}
+
+.json-sub-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #CBD4E8);
+  background: var(--surface-2, #EEF2FA);
+  color: var(--text-dim, #525C74);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: .15s;
+  text-align: center;
+}
+
+.json-sub-btn:hover {
+  background: var(--brand-tint, #DBEAFE);
+  color: var(--brand, #2563EB);
+  border-color: var(--brand, #2563EB);
+}
+
+.json-sub-btn.download {
+  background: rgba(13, 148, 136, 0.1);
+  color: #0D9488;
+  border-color: rgba(13, 148, 136, 0.3);
+}
+
+.json-sub-btn.download:hover {
+  background: #0D9488;
+  color: #ffffff;
+}
+
 .save-btn {
   width: 100%;
   padding: 10px;
@@ -5742,4 +5785,166 @@ button {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+/* ==========================================================================
+   ROAD SCHEMATIC VIEW (LIVE DRAWN MAP)
+   ========================================================================== */
+.road-schematic-view {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-2, #0B132B);
+  border-radius: 12px;
+  border: 1px solid var(--border, #1E293B);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.schematic-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(15, 23, 42, 0.8);
+  border-bottom: 1px solid var(--border, #1E293B);
+}
+
+.schematic-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-dot-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.schematic-title {
+  font-family: var(--font-display, sans-serif);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: .05em;
+  color: var(--text-dim, #94A3B8);
+}
+
+.schematic-dir {
+  font-size: 11px;
+  color: var(--text-faint, #64748B);
+}
+
+.edit-layout-quick-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #334155);
+  background: var(--surface-3, #1E293B);
+  color: #38BDF8;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: .15s;
+}
+
+.edit-layout-quick-btn:hover {
+  background: #38BDF8;
+  color: #0F1729;
+  border-color: #38BDF8;
+}
+
+.schematic-svg-wrap {
+  width: 100%;
+  height: 220px;
+  position: relative;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.95) 100%),
+    linear-gradient(90deg, rgba(51, 65, 85, 0.15) 1px, transparent 1px) 0 0/24px 24px,
+    linear-gradient(0deg, rgba(51, 65, 85, 0.15) 1px, transparent 1px) 0 0/24px 24px;
+}
+
+.schematic-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+@keyframes dashFlow {
+  to {
+    stroke-dashoffset: -36;
+  }
+}
+
+.animated-lane-dashes {
+  animation: dashFlow 1.2s linear infinite;
+}
+
+.schematic-eq-node {
+  transition: transform .15s ease;
+}
+
+.schematic-eq-node.clickable {
+  cursor: pointer;
+}
+
+.schematic-eq-node.clickable:hover {
+  transform: scale(1.18);
+}
+
+.schematic-eq-node.clickable:hover .node-circle {
+  stroke: #38BDF8;
+  filter: drop-shadow(0 0 6px #38BDF8);
+}
+
+.schematic-status-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  font-size: 11px;
+  border-top: 1px solid var(--border, #1E293B);
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.schematic-status-footer.active {
+  background: rgba(13, 148, 136, 0.15);
+  color: #2DD4BF;
+  border-top-color: rgba(13, 148, 136, 0.3);
+}
+
+.schematic-status-footer.pending {
+  background: rgba(217, 119, 6, 0.15);
+  color: #FBBF24;
+  border-top-color: rgba(217, 119, 6, 0.3);
+}
+
+.schematic-status-footer.inactive {
+  background: rgba(30, 41, 59, 0.6);
+  color: #94A3B8;
+}
+
+.status-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@keyframes pulseGlow {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.7; }
+}
+
+.status-dot-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulseGlow 1.8s infinite;
+}
+
+.status-footer-right {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  opacity: 0.8;
 }

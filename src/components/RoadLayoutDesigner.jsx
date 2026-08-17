@@ -62,6 +62,8 @@ export default function RoadLayoutDesigner({
   // Interactive Designer State
   const [mode, setMode] = useState('idle'); // 'idle' | 'drawing' | 'placing'
   const [armedType, setArmedType] = useState(null);
+  const modeRef = useRef(mode);
+  const armedTypeRef = useRef(armedType);
   const [isRoadFinished, setIsRoadFinished] = useState(false);
   const [showJson, setShowJson] = useState(false);
 
@@ -85,47 +87,98 @@ export default function RoadLayoutDesigner({
     return parseFloat(((distAlongPx / total) * distanceKm).toFixed(2));
   };
 
+  // Update modes in Fabric canvas data state and refs
+  useEffect(() => {
+    modeRef.current = mode;
+    armedTypeRef.current = armedType;
+    if (fabricCanvasRef.current) {
+      fabricCanvasRef.current.dataMode = mode;
+      fabricCanvasRef.current.dataArmedType = armedType;
+    }
+  }, [mode, armedType]);
+
   // Synchronize canvas dimensions
   const resizeCanvas = () => {
-    if (!fabricCanvasRef.current || !containerRef.current) return;
+    const c = fabricCanvasRef.current;
+    if (!c || typeof c.setWidth !== 'function' || !containerRef.current) return;
     const stage = containerRef.current;
-    fabricCanvasRef.current.setWidth(stage.clientWidth);
-    fabricCanvasRef.current.setHeight(stage.clientHeight);
-    fabricCanvasRef.current.renderAll();
+    const w = Math.max(stage.clientWidth || 0, 850);
+    const h = Math.max(stage.clientHeight || 0, 480);
+    try {
+      c.setWidth(w);
+      c.setHeight(h);
+      c.renderAll();
+    } catch (e) {
+      console.warn('resizeCanvas error:', e);
+    }
   };
 
   // Initialize Fabric.js Canvas
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    const c = new fabric.Canvas(canvasRef.current, {
-      selection: false,
-      preserveObjectStacking: true
-    });
-    fabricCanvasRef.current = c;
+    // Dispose previous fabric instance if present on re-mount
+    if (fabricCanvasRef.current) {
+      try {
+        fabricCanvasRef.current.dispose();
+      } catch (e) {}
+      fabricCanvasRef.current = null;
+    }
+
+    const canvasEl = canvasRef.current;
+    if (canvasEl.__fabric) {
+      try {
+        canvasEl.__fabric.dispose();
+      } catch (e) {}
+    }
+
+    let c = null;
+    try {
+      c = new fabric.Canvas(canvasEl, {
+        selection: false,
+        preserveObjectStacking: true
+      });
+      canvasEl.__fabric = c;
+      fabricCanvasRef.current = c;
+    } catch (err) {
+      console.warn('Fabric Canvas init notice:', err);
+      return;
+    }
 
     resizeCanvas();
+    const timer1 = setTimeout(resizeCanvas, 100);
+    const timer2 = setTimeout(resizeCanvas, 300);
+
     window.addEventListener('resize', resizeCanvas);
 
     // Mouse down listener for point drawing & equipment placing
     c.on('mouse:down', (opt) => {
-      const p = c.getPointer(opt.e);
-      const currentMode = c.dataMode || 'idle';
-      const currentArmed = c.dataArmedType || null;
+      if (!c) return;
+      const p = c.getPointer ? c.getPointer(opt.e) : { x: opt.e.offsetX, y: opt.e.offsetY };
+      const currentMode = modeRef.current || 'idle';
+      const currentArmed = armedTypeRef.current || null;
 
-      if (currentMode === 'drawing') {
+      if (currentMode === 'drawing' || (currentMode === 'idle' && !finalRoadRef.current)) {
+        if (currentMode === 'idle') {
+          setMode('drawing');
+          modeRef.current = 'drawing';
+        }
         roadPointsRef.current.push({ x: p.x, y: p.y });
         const dot = new fabric.Circle({
-          left: p.x - 4,
-          top: p.y - 4,
-          radius: 4,
+          left: p.x - 6,
+          top: p.y - 6,
+          radius: 6,
           fill: '#2563EB',
+          stroke: '#FFFFFF',
+          strokeWidth: 2,
           selectable: false,
           evented: false
         });
         c.add(dot);
+        if (typeof dot.bringToFront === 'function') dot.bringToFront();
         waypointDotsRef.current.push(dot);
         redrawPreviewLine();
+        c.renderAll();
         return;
       }
 
@@ -138,25 +191,32 @@ export default function RoadLayoutDesigner({
       }
     });
 
-    // If initial location has a saved roadPath or sample, pre-load it
-    if (initialLoc && initialLoc.roadPath && initialLoc.roadPath.length >= 2) {
-      loadSavedRoadPath(initialLoc.roadPath);
-    }
+    // Automatically load initial or sample road path so canvas is never blank
+    const initTimer = setTimeout(() => {
+      resizeCanvas();
+      if (initialLoc && initialLoc.roadPath && initialLoc.roadPath.length >= 2) {
+        loadSavedRoadPath(initialLoc.roadPath);
+      } else {
+        handleLoadSample();
+      }
+    }, 150);
 
     return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(initTimer);
       window.removeEventListener('resize', resizeCanvas);
-      c.dispose();
-      fabricCanvasRef.current = null;
+      if (fabricCanvasRef.current) {
+        try {
+          fabricCanvasRef.current.dispose();
+        } catch (e) {}
+        fabricCanvasRef.current = null;
+      }
+      if (canvasEl) {
+        delete canvasEl.__fabric;
+      }
     };
   }, []);
-
-  // Update modes in Fabric canvas data state
-  useEffect(() => {
-    if (fabricCanvasRef.current) {
-      fabricCanvasRef.current.dataMode = mode;
-      fabricCanvasRef.current.dataArmedType = armedType;
-    }
-  }, [mode, armedType]);
 
   // Redraw preview dotted line while drawing
   const redrawPreviewLine = () => {
@@ -179,7 +239,7 @@ export default function RoadLayoutDesigner({
     });
     previewLineRef.current = pl;
     c.add(pl);
-    c.sendToBack(pl);
+    if (typeof pl.sendToBack === 'function') pl.sendToBack();
     c.renderAll();
   };
 
@@ -231,8 +291,8 @@ export default function RoadLayoutDesigner({
 
     c.add(finalRoad);
     c.add(laneDashes);
-    c.sendToBack(laneDashes);
-    c.sendToBack(finalRoad);
+    if (typeof laneDashes.sendToBack === 'function') laneDashes.sendToBack();
+    if (typeof finalRoad.sendToBack === 'function') finalRoad.sendToBack();
 
     setMode('idle');
     setIsRoadFinished(true);
@@ -438,10 +498,17 @@ export default function RoadLayoutDesigner({
     if (onShowToast) onShowToast('Loaded sample layout — drag any marker along the road to adjust KM position.');
   };
 
-  // Build complete JSON structure
+  // Build complete JSON structure matching both system schema and prototype specification
   const buildLayoutObject = () => {
     const totalDist = parseFloat(distKm) || 0;
     const sortedEq = [...equipmentList].sort((a, b) => a.km - b.km);
+
+    // Prototype specification equipment list
+    const rawEquipmentList = sortedEq.map((e) => ({
+      id: e.id,
+      type: e.type,
+      kmPosition: parseFloat(e.km.toFixed(2))
+    }));
 
     // Grouping equipment for Smartlane location schema
     const lcsItems = sortedEq
@@ -490,9 +557,12 @@ export default function RoadLayoutDesigner({
     return {
       id: initialLoc ? initialLoc.id : `loc-${Date.now().toString(36)}`,
       name: locName || 'Smartlane Custom Segment',
+      locationName: locName || 'Smartlane Custom Segment',
       direction: direction,
       distKm: totalDist,
+      distanceKm: totalDist,
       roadPath: roadPointsRef.current.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) })),
+      equipmentList: rawEquipmentList,
       equipment: {
         cctv: [cctvCount, cctvCount],
         avds: [avdsCount, avdsCount],
@@ -533,15 +603,33 @@ export default function RoadLayoutDesigner({
       return;
     }
     const layoutObj = buildLayoutObject();
+    setShowJson(true);
     if (onSaveLayout) {
       onSaveLayout(layoutObj);
     }
     if (onShowToast) {
-      onShowToast(`Saved road layout for ${locName} (${equipmentList.length} equipment placed).`);
+      onShowToast(`Layout saved for ${locName} (${equipmentList.length} equipment placed).`);
     }
-    if (onClose) {
-      onClose();
-    }
+  };
+
+  const handleDownloadJson = () => {
+    const layoutObj = buildLayoutObject();
+    const jsonStr = JSON.stringify(layoutObj, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `smartlane-layout-${(locName || 'road').toLowerCase().replace(/\s+/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    if (onShowToast) onShowToast('Downloaded layout JSON file.');
+  };
+
+  const handleCopyJson = () => {
+    const layoutObj = buildLayoutObject();
+    const jsonStr = JSON.stringify(layoutObj, null, 2);
+    navigator.clipboard.writeText(jsonStr);
+    if (onShowToast) onShowToast('Layout JSON copied to clipboard!');
   };
 
   return (
@@ -722,8 +810,18 @@ export default function RoadLayoutDesigner({
               <span className="arrow">{showJson ? '▾' : '▸'}</span>
             </div>
             {showJson && (
-              <div className="json-box">
-                <pre>{JSON.stringify(buildLayoutObject(), null, 2)}</pre>
+              <div className="json-box-wrap">
+                <div className="json-box">
+                  <pre>{JSON.stringify(buildLayoutObject(), null, 2)}</pre>
+                </div>
+                <div className="json-action-row">
+                  <button className="json-sub-btn" onClick={handleCopyJson} title="Copy JSON string to clipboard">
+                    📋 Copy
+                  </button>
+                  <button className="json-sub-btn download" onClick={handleDownloadJson} title="Download layout as .json file">
+                    📥 Download JSON
+                  </button>
+                </div>
               </div>
             )}
             <button className="save-btn" onClick={handleSave}>

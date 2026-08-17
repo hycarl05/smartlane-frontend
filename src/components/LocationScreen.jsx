@@ -5,6 +5,8 @@ import VmsEditor, { VmsEditorSection, DEFAULT_ROLE_TEMPLATES, getDynamicVmsMessa
 import CctvModal from './CctvModal';
 import AuditLogDisplay from './AuditLogDisplay';
 import RoadLayoutDesigner from './RoadLayoutDesigner';
+import RoadSchematicView from './RoadSchematicView';
+import MapView from './MapView';
 import {
   fmtElapsed,
   SCHEDULE_ITEMS,
@@ -239,13 +241,15 @@ export default function LocationScreen({
       </div>
 
       <div className="tabbar">
-        {['overview', 'vms', 'designer', 'schedule', 'log', 'reports', 'settings'].map(tabKey => (
+        {['overview', 'map', 'vms', 'designer', 'schedule', 'log', 'reports', 'settings'].map(tabKey => (
           <button
             key={tabKey}
             className={`tab-btn ${activeTab === tabKey ? 'active' : ''}`}
             onClick={() => setActiveTab(tabKey)}
           >
-            {tabKey === 'vms'
+            {tabKey === 'map'
+              ? '🗺️ GIS Live Map'
+              : tabKey === 'vms'
               ? '📺 VMS Control & Editor'
               : tabKey === 'designer'
               ? '🎨 Road Layout Designer'
@@ -485,51 +489,15 @@ export default function LocationScreen({
               {/* ── RIGHT COLUMN ────────────────────────────────────── */}
               <div className="ov-right-col">
 
-                {/* 1. Live Schematic */}
-                <div className="panel schematic-wrap">
-                  <div className="panel-title">
-                    Live Schematic{' '}
-                    <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
-                      ({loc.direction})
-                    </span>
-                  </div>
+                {/* 1. Live Schematic Map */}
+                <RoadSchematicView
+                  loc={loc}
+                  onSelectCctv={setSelectedCctv}
+                  onOpenDesigner={() => setActiveTab('designer')}
+                />
 
-                  <div className={`lane-banner ${loc.status}`}>
-                    LANE STATE: {loc.status.toUpperCase()} — {loc.phaseLabel.toUpperCase()}
-                  </div>
-
-                  <div className="gantry-row">
-                    {loc.gantries.map((g, idx) => (
-                      <div
-                        key={idx}
-                        className="gantry"
-                        onClick={() => {
-                          if (g.type === 'CCTV') {
-                            setSelectedCctv(g);
-                          }
-                        }}
-                        style={{ cursor: g.type === 'CCTV' ? 'pointer' : 'default' }}
-                        title={
-                          g.type === 'CCTV'
-                            ? g.status === 'ok'
-                              ? `CCTV ${g.km}: ONLINE — Continuous 24/7 Recording Active (Click to View Stream)`
-                              : `CCTV ${g.km}: HARDWARE FAULT — Physical Connection Lost`
-                            : `LCS Gantry ${g.km}`
-                        }
-                      >
-                        <div className={`gantry-icon ${g.status === 'fault' || g.status === 'off' ? 'off' : g.status}`}>
-                          {g.type === 'CCTV' ? '📷' : '🚦'}
-                        </div>
-                        <div className="gantry-label">{g.km}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className={`lane-visual ${isActive ? 'active' : ''}`}>
-                    <div className="fill"></div>
-                    <div className="flow-fill"></div>
-                  </div>
-
+                {/* 2. Lane Control Signs & Traffic Metrics */}
+                <div className="panel lcs-panel">
                   <div className="lcs-head">
                     <span style={{ fontSize: '10.5px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '.05em' }}>
                       Lane Control Signs
@@ -646,6 +614,35 @@ export default function LocationScreen({
         )}
 
 
+
+        {/* GIS LIVE MAP TAB */}
+        {activeTab === 'map' && (
+          <div className="tab-panel active" style={{ padding: 0, height: 'calc(100vh - 130px)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '12px 20px', background: 'var(--panel-bg, #1e293b)', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <span style={{ fontWeight: '700', fontSize: '15px', color: '#f8fafc' }}>🗺️ Live GIS Map — {loc.name}</span>
+                <span style={{ fontSize: '12px', color: '#94a3b8', marginLeft: '12px' }}>Real-time location &amp; gantry maplibre visualization</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '6px', background: loc.status === 'active' ? '#10b98122' : '#64748b22', color: loc.status === 'active' ? '#10b981' : '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', fontWeight: '600' }}>
+                  Status: {loc.status.toUpperCase()}
+                </span>
+                <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '6px', background: '#2563eb22', color: '#60a5fa', border: '1px solid rgba(37,99,235,0.3)', fontWeight: '600' }}>
+                  Direction: {loc.direction}
+                </span>
+              </div>
+            </div>
+            <div style={{ flex: 1, position: 'relative', minHeight: '400px' }}>
+              <MapView
+                center={loc.coordinates || [101.7650, 2.8910]}
+                zoom={13}
+                locations={[loc]}
+                interactive={true}
+                containerStyle={{ borderRadius: 0 }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* VMS CONTROL & EDITOR TAB */}
         {activeTab === 'vms' && (
