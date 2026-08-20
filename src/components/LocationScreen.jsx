@@ -29,7 +29,8 @@ export default function LocationScreen({
   user,
   onLogout,
   onUpdateLoc,
-  onShowToast
+  onShowToast,
+  hideTopbars = false
 }) {
   const [extendMin, setExtendMin] = useState(0);
   const [showPausePopover, setShowPausePopover] = useState(false);
@@ -200,72 +201,78 @@ export default function LocationScreen({
     return l.sev === logFilter;
   });
 
+  const isOverviewOrCorridor = activeTab === 'overview' || activeTab === 'corridor';
+
   return (
-    <div className="screen active" style={{ position: 'relative' }}>
-      <div className="loc-topbar">
-        <button className="back-btn" onClick={onBack}>← All Locations</button>
+    <div className="screen active unified-location-shell">
+      {!hideTopbars && (
+        <>
+          <div className="loc-topbar">
+            <button className="back-btn" onClick={onBack}>← All Locations</button>
 
-        <div className="loc-dropdown-wrap">
-          <span className="loc-label-prefix">LOCATION:</span>
-          <select
-            className="loc-select-dropdown"
-            value={loc.id}
-            onChange={(e) => {
-              if (onSelectLocation) {
-                onSelectLocation(e.target.value, activeTab);
-              }
-            }}
-          >
-            {locations.map(l => (
-              <option key={l.id} value={l.id}>
-                {l.name} ({l.direction})
-              </option>
+            <div className="loc-dropdown-wrap">
+              <span className="loc-label-prefix">LOCATION:</span>
+              <select
+                className="loc-select-dropdown"
+                value={loc.id}
+                onChange={(e) => {
+                  if (onSelectLocation) {
+                    onSelectLocation(e.target.value, activeTab);
+                  }
+                }}
+              >
+                {locations.map(l => (
+                  <option key={l.id} value={l.id}>
+                    {l.name} ({l.direction})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="topbar-right" style={{ marginLeft: 'auto' }}>
+              <div className="clock">
+                <b>{time}</b>
+                <span>{date}</span>
+              </div>
+              <div className="user-chip">
+                <span className="user-dot"></span> {user ? user.username : 'admin'}
+              </div>
+              {onLogout && (
+                <button className="logout-btn" onClick={onLogout} title="Sign Out">
+                  Logout ↵
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="tabbar">
+            {['overview', 'map', 'vms', 'designer', 'schedule', 'log', 'reports', 'settings'].map(tabKey => (
+              <button
+                key={tabKey}
+                className={`tab-btn ${activeTab === tabKey ? 'active' : ''}`}
+                onClick={() => setActiveTab(tabKey)}
+              >
+                {tabKey === 'map'
+                  ? '🗺️ GIS Live Map'
+                  : tabKey === 'vms'
+                  ? '📺 VMS Control & Editor'
+                  : tabKey === 'designer'
+                  ? '🎨 Road Layout Designer'
+                  : tabKey === 'log'
+                  ? 'Alarms & Log'
+                  : tabKey.charAt(0).toUpperCase() + tabKey.slice(1)}
+                {tabKey === 'log' && loc.alarms.length > 0 && (
+                  <span className="badge">{loc.alarms.length}</span>
+                )}
+              </button>
             ))}
-          </select>
-        </div>
-
-        <div className="topbar-right" style={{ marginLeft: 'auto' }}>
-          <div className="clock">
-            <b>{time}</b>
-            <span>{date}</span>
           </div>
-          <div className="user-chip">
-            <span className="user-dot"></span> {user ? user.username : 'admin'}
-          </div>
-          {onLogout && (
-            <button className="logout-btn" onClick={onLogout} title="Sign Out">
-              Logout ↵
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="tabbar">
-        {['overview', 'map', 'vms', 'designer', 'schedule', 'log', 'reports', 'settings'].map(tabKey => (
-          <button
-            key={tabKey}
-            className={`tab-btn ${activeTab === tabKey ? 'active' : ''}`}
-            onClick={() => setActiveTab(tabKey)}
-          >
-            {tabKey === 'map'
-              ? '🗺️ GIS Live Map'
-              : tabKey === 'vms'
-              ? '📺 VMS Control & Editor'
-              : tabKey === 'designer'
-              ? '🎨 Road Layout Designer'
-              : tabKey === 'log'
-              ? 'Alarms & Log'
-              : tabKey.charAt(0).toUpperCase() + tabKey.slice(1)}
-            {tabKey === 'log' && loc.alarms.length > 0 && (
-              <span className="badge">{loc.alarms.length}</span>
-            )}
-          </button>
-        ))}
-      </div>
+        </>
+      )}
 
       <div className="tab-panels">
-        {/* OVERVIEW TAB */}
-        {activeTab === 'overview' && (
+        {/* OVERVIEW / CORRIDOR TAB */}
+        {isOverviewOrCorridor && (
           <div className="tab-panel active">
             <div className="ov-wrapper">
 
@@ -316,6 +323,7 @@ export default function LocationScreen({
                     </div>
                   )}
 
+                  {/* Compact Facts Row */}
                   <div className="op-facts">
                     <div className="op-fact">
                       <div className="lbl">Elapsed</div>
@@ -335,46 +343,34 @@ export default function LocationScreen({
                     </div>
                   </div>
 
-                  {/* ACTION CONTROLS — Single sequential button for current phase step */}
-                  <div className="phase-actions-group">
-                    {(!isActive && (loc.phase === 0 || !loc.phase)) && (
-                      <button className="primary-toggle to-activate" onClick={handleStartPhase1}>
-                        ▶ INITIATE PHASE 1 (PRE-ACTIVATION WARNING)
-                      </button>
-                    )}
-                    {loc.phase === 1 && (
-                      <button className="primary-toggle to-activate" onClick={handleStartPhase2Now}>
-                        ✅ CONFIRM PHASE 2 (OPEN EMERGENCY LANE)
-                      </button>
-                    )}
-                    {loc.phase === 2 && (
-                      <button className="primary-toggle to-deactivate" onClick={handleStartPhase3Deactivation}>
-                        ⚠️ INITIATE PHASE 3 (PRE-DEACTIVATION WARNING)
-                      </button>
-                    )}
-                    {loc.phase === 3 && (
-                      <button className="primary-toggle to-deactivate" onClick={handleDeactivatePhase4And5}>
-                        🛑 CONFIRM PHASE 4 (CLOSE EMERGENCY LANE)
-                      </button>
-                    )}
-                    {loc.phase === 5 && (
-                      <button className="mini-btn neutral-btn" style={{ width: '100%' }} onClick={() => onShowToast('Compiling Smart Lane Activation Report...')}>
-                        📄 Compile Phase 5 Activation Report
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="row-btns">
+                  {/* Operation Controls Row */}
+                  <div className="op-controls-inline-row">
                     <button
                       className="mini-btn warn-btn"
                       onClick={() => setShowPausePopover(!showPausePopover)}
                     >
                       Pause / Manual
                     </button>
+
+                    <div className="extend-row-inline">
+                      <button className="sq-btn" onClick={() => handleExtend(-15)}>−</button>
+                      <div className="val">+{extendMin}m</div>
+                      <button className="sq-btn" onClick={() => handleExtend(15)}>+</button>
+                    </div>
+
+                    <div className="toggle-line-inline" title="Traffic threshold monitor">
+                      <span className="lbl-mini">Auto Monitor</span>
+                      <div
+                        className={`switch mini-switch ${loc.thresholdArmed ? 'on' : ''}`}
+                        onClick={handleToggleThreshold}
+                      >
+                        <div className="knob"></div>
+                      </div>
+                    </div>
                   </div>
 
                   {showPausePopover && (
-                    <div className="popover show" style={{ top: '160px', left: '10px' }}>
+                    <div className="popover show" style={{ top: '120px', left: '10px', zIndex: 100 }}>
                       <div className="ptitle">Reason for intervention</div>
                       <button onClick={() => handlePauseReason('Breakdown / accident obstructing lane')}>
                         Breakdown/accident — obstructing
@@ -391,24 +387,8 @@ export default function LocationScreen({
                     </div>
                   )}
 
-                  <div className="extend-row">
-                    <button className="sq-btn" onClick={() => handleExtend(-15)}>−</button>
-                    <div className="val">+{extendMin} min</div>
-                    <button className="sq-btn" onClick={() => handleExtend(15)}>+</button>
-                  </div>
-
-                  <div className="toggle-line">
-                    <div className="lbl">Traffic threshold monitor</div>
-                    <div
-                      className={`switch ${loc.thresholdArmed ? 'on' : ''}`}
-                      onClick={handleToggleThreshold}
-                    >
-                      <div className="knob"></div>
-                    </div>
-                  </div>
-
-                  <div className="next-run">
-                    Next scheduled run: <b>{loc.nextRun}</b>
+                  <div className="next-run-compact">
+                    Next scheduled run: <b>{loc.nextRun || '—'}</b>
                   </div>
                 </div>
 
@@ -656,7 +636,7 @@ export default function LocationScreen({
 
         {/* ROAD LAYOUT DESIGNER TAB */}
         {activeTab === 'designer' && (
-          <div className="tab-panel active" style={{ padding: 0, height: 'calc(100vh - 120px)' }}>
+          <div className="tab-panel active" style={{ padding: 0, height: '100%', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <RoadLayoutDesigner
               initialLoc={loc}
               onSaveLayout={(updatedLoc) => {

@@ -1,251 +1,245 @@
-import React, { useState } from 'react';
-import Topbar from './Topbar';
-import RoadLayoutDesigner from './RoadLayoutDesigner';
-import MapView from './MapView';
+import React from 'react';
 import { fmtElapsed } from '../data';
 
-export default function OverviewScreen({ locations, onSelectLocation, time, date, user, onLogout, onSaveNewLocation, onShowToast }) {
-  const [showDesignerModal, setShowDesignerModal] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
+export default function OverviewScreen({
+  locations,
+  onSelectLocation,
+  setActiveLocId,
+  onNavigateTab,
+}) {
   const activeCount = locations.filter(l => l.status === 'active').length;
   const pendingCount = locations.filter(l => l.status === 'pending').length;
-  const totalAlarms = locations.reduce((sum, l) => sum + l.alarms.length, 0);
+  const totalAlarms = locations.reduce((sum, l) => sum + (l.alarms ? l.alarms.length : 0), 0);
 
   const allAlarms = [];
   locations.forEach(l => {
-    l.alarms.forEach(a => {
+    (l.alarms || []).forEach(a => {
       allAlarms.push({ ...a, loc: l.name, locId: l.id });
     });
   });
 
+  const handleOpenCorridor = (locId) => {
+    if (setActiveLocId) setActiveLocId(locId);
+    if (onSelectLocation) onSelectLocation(locId);
+    if (onNavigateTab) onNavigateTab('corridor');
+  };
+
+  const getLosTheme = (los) => {
+    switch (los) {
+      case 'A': return { color: '#10B981', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.4)', text: 'Optimal' };
+      case 'B': return { color: '#34D399', bg: 'rgba(52,211,153,0.15)', border: 'rgba(52,211,153,0.4)', text: 'Stable' };
+      case 'C': return { color: '#FBBF24', bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.4)', text: 'Moderate' };
+      case 'D': return { color: '#F97316', bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.4)', text: 'Heavy' };
+      case 'E': return { color: '#EF4444', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.4)', text: 'Congested' };
+      default: return { color: '#38BDF8', bg: 'rgba(56,189,248,0.15)', border: 'rgba(56,189,248,0.4)', text: 'Normal' };
+    }
+  };
+
   return (
-    <div className="screen active">
-      <Topbar time={time} date={date} user={user} onLogout={onLogout} />
+    <div className="ov-clean-master-root">
 
-      <div className="overview-header">
-        <div>
-          <div className="overview-title">All Smartlane Locations</div>
-          <div className="overview-sub">Select a location to open its live dashboard and controls</div>
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ display: 'flex', background: 'var(--panel-bg, #1e293b)', padding: '3px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <button
-              onClick={() => setViewMode('list')}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '8px',
-                border: 'none',
-                background: viewMode === 'list' ? 'var(--brand, #2563eb)' : 'transparent',
-                color: '#fff',
-                fontWeight: '600',
-                fontSize: '12px',
-                cursor: 'pointer'
-              }}
-            >
-              📋 List View
-            </button>
-            <button
-              onClick={() => setViewMode('map')}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '8px',
-                border: 'none',
-                background: viewMode === 'map' ? 'var(--brand, #2563eb)' : 'transparent',
-                color: '#fff',
-                fontWeight: '600',
-                fontSize: '12px',
-                cursor: 'pointer'
-              }}
-            >
-              🗺️ GIS Map View
-            </button>
+      {/* ── 1. CLEAN HEADER (GIS Map & Draw Layout REMOVED) ─────────── */}
+      <div className="ov-master-top-bar">
+        <div className="ov-title-block">
+          <div className="ov-headline">
+            <span className="ov-live-radar-dot"></span>
+            <h1>All Smartlane Locations</h1>
           </div>
+          <p className="ov-subheadline">
+            Central Command &amp; Multi-Corridor Operational Roster — Select any corridor to launch its real-time telemetry dashboard.
+          </p>
+        </div>
 
-          <button
-            className="create-layout-btn"
-            onClick={() => setShowDesignerModal(true)}
-            style={{
-              padding: '10px 18px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, var(--brand), #1447B8)',
-              color: '#fff',
-              border: 'none',
-              fontWeight: '700',
-              fontSize: '12.5px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              boxShadow: 'var(--shadow-sm)'
-            }}
-          >
-            <span>🎨</span> Draw New Road Layout
-          </button>
+        {/* Quick Summary Pill */}
+        <div className="ov-network-pulse-pill">
+          <span className="pulse-tag">NETWORK STATUS</span>
+          <span className="pulse-val"><b>{activeCount}</b> / {locations.length} Corridors Active</span>
         </div>
       </div>
 
-      <div className="overview-body-full">
-        {/* TOP STAT CARDS BAR */}
-        <div className="stat-cards-row">
-          <div className="stat-card">
-            <div className="stat-icon icon-blue">📊</div>
-            <div className="stat-info">
-              <span className="stat-num">{locations.length}</span>
-              <span className="stat-lbl">Total locations</span>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon icon-green">▶</div>
-            <div className="stat-info">
-              <span className="stat-num">{activeCount}</span>
-              <span className="stat-lbl">Active now</span>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon icon-amber">!</div>
-            <div className="stat-info">
-              <span className="stat-num">{pendingCount}</span>
-              <span className="stat-lbl">Needs attention</span>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon icon-red">⚠️</div>
-            <div className="stat-info">
-              <span className="stat-num">{totalAlarms}</span>
-              <span className="stat-lbl">Open alarms</span>
-            </div>
+      {/* ── 2. TOP 4 SUMMARY STAT CARDS ──────────────────────────────── */}
+      <div className="ov-stat-deck-row">
+        
+        <div className="ov-stat-pill-box box-total">
+          <div className="stat-pill-icon blue">📊</div>
+          <div className="stat-pill-data">
+            <span className="stat-pill-num">{locations.length}</span>
+            <span className="stat-pill-lbl">Total Locations</span>
           </div>
         </div>
 
-        {/* ALARMS BANNER STRIP */}
-        {allAlarms.length > 0 && (
-          <div className="alarms-banner-strip">
-            {allAlarms.map((a, idx) => (
+        <div className="ov-stat-pill-box box-active">
+          <div className="stat-pill-icon green">▶</div>
+          <div className="stat-pill-data">
+            <span className="stat-pill-num">{activeCount}</span>
+            <span className="stat-pill-lbl">Active Now (Phase 2)</span>
+          </div>
+        </div>
+
+        <div className="ov-stat-pill-box box-pending">
+          <div className="stat-pill-icon amber">!</div>
+          <div className="stat-pill-data">
+            <span className="stat-pill-num">{pendingCount}</span>
+            <span className="stat-pill-lbl">Needs Attention</span>
+          </div>
+        </div>
+
+        <div className="ov-stat-pill-box box-alarms">
+          <div className="stat-pill-icon red">⚠️</div>
+          <div className="stat-pill-data">
+            <span className="stat-pill-num">{totalAlarms}</span>
+            <span className="stat-pill-lbl">Open Alarms</span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── 3. LIVE ALARMS BANNER STRIP ──────────────────────────────── */}
+      {allAlarms.length > 0 && (
+        <div className="ov-ticker-alarms-bar">
+          <div className="ticker-badge">🚨 ACTIVE ALERTS</div>
+          <div className="ticker-scroll-content">
+            {allAlarms.map((alarm, idx) => (
               <div
                 key={idx}
-                className="alarm-banner-item"
-                onClick={() => onSelectLocation(a.locId, 'log')}
+                className="ticker-event-pill"
+                onClick={() => handleOpenCorridor(alarm.locId)}
+                title="Click to view corridor"
               >
-                <span className={`banner-indicator ${a.sev === 'critical' ? 'crit' : 'warn'}`}></span>
-                <div className="banner-content">
-                  <b>{a.title}</b>
-                  <span>{a.loc} · {a.time}</span>
-                </div>
+                <span className={`event-sev-dot ${alarm.sev === 'critical' ? 'crit' : 'warn'}`}></span>
+                <span className="event-title">{alarm.title || alarm.msg}</span>
+                <span className="event-corridor">({alarm.loc} • {alarm.time || '14:31'})</span>
               </div>
             ))}
           </div>
-        )}
-
-        {/* CONTENT SWITCHER: LIST OR MAP */}
-        {viewMode === 'map' ? (
-          <div className="overview-map-container" style={{ height: 'calc(100vh - 240px)', minHeight: '500px', width: '100%', position: 'relative', marginTop: '16px' }}>
-            <MapView
-              center={[101.8, 3.5]}
-              zoom={6.8}
-              locations={locations}
-              onSelectLocation={onSelectLocation}
-              interactive={true}
-              containerStyle={{ border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
-            />
-          </div>
-        ) : (
-          /* FULL-WIDTH HORIZONTAL LOCATION ROWS */
-          <div className="loc-rows-list">
-            {locations.map(loc => {
-              const cnt = loc.alarms.length;
-              const isActive = loc.status === 'active';
-              const isPending = loc.status === 'pending';
-
-              return (
-                <div
-                  key={loc.id}
-                  className={`loc-row-card is-${loc.status}`}
-                  onClick={() => onSelectLocation(loc.id)}
-                >
-                  <div className={`loc-accent-stripe is-${loc.status}`}></div>
-
-                  {/* LOC NAME */}
-                  <div className="row-col-name">
-                    <div className="loc-name">{loc.name}</div>
-                    <div className="loc-dir">{loc.direction}</div>
-                  </div>
-
-                  {/* CENTERED SCHEMATIC */}
-                  <div className="row-col-glyph">
-                    <svg className="row-road-glyph" viewBox="0 0 220 34" preserveAspectRatio="none">
-                      <line className="track" x1="6" y1="17" x2="214" y2="17" />
-                      <line className="flow" x1="6" y1="17" x2="214" y2="17" />
-                      {[26, 66, 106, 146, 186].map(x => (
-                        <circle
-                          key={x}
-                          className={`marker ${isActive || isPending ? 'on' : ''}`}
-                          cx={x}
-                          cy="17"
-                          r="3"
-                        />
-                      ))}
-                    </svg>
-                  </div>
-
-                  {/* METRICS */}
-                  <div className="row-col-metrics">
-                    <div className="loc-meta">
-                      <div className="lbl">LEVEL OF SERVICE</div>
-                      <div className={`val ${loc.los === 'A' || loc.los === 'B' ? 'good' : loc.los === 'C' || loc.los === 'D' ? 'warn' : 'crit'}`}>
-                        {loc.los}
-                      </div>
-                    </div>
-                    <div className="loc-meta">
-                      <div className="lbl">TRAFFIC FLOW</div>
-                      <div className="val">{loc.trafficFlow}</div>
-                    </div>
-                    <div className="loc-meta">
-                      <div className="lbl">{isActive ? 'ELAPSED' : 'NEXT RUN'}</div>
-                      <div className="val">{isActive ? fmtElapsed(loc.elapsedSeconds) : loc.nextRun}</div>
-                    </div>
-                  </div>
-
-                  {/* STATUS & ACTIONS */}
-                  <div className="row-col-actions">
-                    <div className={`status-pill ${loc.status}`}>
-                      <span className="dot"></span>
-                      {isActive ? `ACTIVE · P${loc.phase}` : isPending ? 'ATTENTION' : 'INACTIVE'}
-                    </div>
-
-                    <div className={`alarm-tag ${cnt === 0 ? 'none' : ''}`}>
-                      <b>{cnt}</b> {cnt === 1 ? 'alarm' : 'alarms'}
-                    </div>
-
-                    <button
-                      className="open-btn"
-                      onClick={(e) => { e.stopPropagation(); onSelectLocation(loc.id); }}
-                    >
-                      Open Dashboard →
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* ROAD LAYOUT DESIGNER MODAL */}
-      {showDesignerModal && (
-        <div className="designer-modal-overlay">
-          <div className="designer-modal-content">
-            <RoadLayoutDesigner
-              onSaveLayout={(newLoc) => {
-                if (onSaveNewLocation) onSaveNewLocation(newLoc);
-                setShowDesignerModal(false);
-              }}
-              onClose={() => setShowDesignerModal(false)}
-              onShowToast={onShowToast}
-            />
-          </div>
         </div>
       )}
+
+      {/* ── 4. REDESIGNED HIGH-INTEREST CORRIDOR CARDS (ZERO SCROLL) ──── */}
+      <div className="ov-corridors-deck">
+        {locations.map((loc) => {
+          const alarmCount = loc.alarms ? loc.alarms.length : 0;
+          const isActive = loc.status === 'active';
+          const isPending = loc.status === 'pending';
+          const losTheme = getLosTheme(loc.los || 'A');
+
+          // Equipment calculation
+          const cctv = loc.equipment?.cctv || [13, 14];
+          const avds = loc.equipment?.avds || [9, 10];
+          const lcs = loc.equipment?.lcs || [12, 12];
+          const vms = loc.equipment?.vms || [2, 2];
+
+          // Speed and traffic simulation based on status
+          const speedVal = isActive ? (loc.trafficFlow?.includes('Congested') ? 68 : 84) : 88;
+          const volumeVal = isActive ? 5420 : (loc.trafficFlow?.includes('Congested') ? 4980 : 3200);
+
+          return (
+            <div
+              key={loc.id}
+              className={`ov-rich-corridor-card state-${loc.status}`}
+              onClick={() => handleOpenCorridor(loc.id)}
+            >
+              {/* Left Accent Glow Bar */}
+              <div className={`card-accent-rail state-${loc.status}`}></div>
+
+              {/* 1. Identity Column */}
+              <div className="card-col-identity">
+                <div className="identity-title-row">
+                  <span className={`identity-live-dot ${isActive ? 'online' : isPending ? 'pending' : 'standby'}`}></span>
+                  <h3 className="corridor-heading">{loc.name}</h3>
+                </div>
+                <div className="identity-tags-row">
+                  <span className="chainage-tag">🛣️ KM {loc.distKm || '8.4'} • {loc.direction || 'NORTHBOUND'}</span>
+                  <span className={`phase-status-pill ${isActive ? 'active' : isPending ? 'pending' : 'standby'}`}>
+                    {isActive ? `PHASE ${loc.phase || 2}: ACTIVE OPERATION` : isPending ? 'PHASE 1: PRE-ACTIVATION' : 'STANDBY / INACTIVE'}
+                  </span>
+                </div>
+              </div>
+
+              {/* 2. Level of Service & Speed Deck */}
+              <div className="card-col-traffic">
+                <div className="los-badge-container" style={{ background: losTheme.bg, borderColor: losTheme.border }}>
+                  <span className="los-label">LOS</span>
+                  <span className="los-value" style={{ color: losTheme.color }}>{loc.los || 'A'}</span>
+                </div>
+
+                <div className="traffic-stats-box">
+                  <div className="speed-flow-row">
+                    <span className="speed-big mono">{speedVal} <small>km/h</small></span>
+                    <span className="traffic-state-text" style={{ color: losTheme.color }}>
+                      {loc.trafficFlow || 'Normal Flow'}
+                    </span>
+                  </div>
+                  <div className="volume-sub mono">{volumeVal.toLocaleString()} veh/h Total Volume</div>
+                </div>
+              </div>
+
+              {/* 3. Animated Highway Schematic Glyph & Equipment Chips */}
+              <div className="card-col-visual">
+                <div className="mini-highway-track-wrap">
+                  <svg className="mini-highway-svg" viewBox="0 0 180 20" preserveAspectRatio="none">
+                    <line className="highway-bed" x1="4" y1="10" x2="176" y2="10" />
+                    <line className={`highway-flow ${isActive ? 'flowing' : ''}`} x1="4" y1="10" x2="176" y2="10" />
+                    {[20, 55, 90, 125, 160].map(x => (
+                      <circle
+                        key={x}
+                        className={`highway-dot ${isActive ? 'on' : isPending ? 'pending' : ''}`}
+                        cx={x}
+                        cy="10"
+                        r="2.5"
+                      />
+                    ))}
+                  </svg>
+                </div>
+
+                <div className="equipment-chips-deck">
+                  <span className="eq-mini-chip" title="CCTV Cameras">📹 {cctv[0]}/{cctv[1]}</span>
+                  <span className="eq-mini-chip" title="AVDS Detectors">📡 {avds[0]}/{avds[1]}</span>
+                  <span className="eq-mini-chip" title="Lane Control Signs">🚥 {lcs[0]}/{lcs[1]}</span>
+                  <span className="eq-mini-chip" title="Variable Message Signs">📺 {vms[0]}/{vms[1]}</span>
+                </div>
+              </div>
+
+              {/* 4. Operations Timer / Next Run Schedule */}
+              <div className="card-col-schedule">
+                <div className="schedule-lbl">{isActive ? 'OPERATION ELAPSED' : 'NEXT SCHEDULED RUN'}</div>
+                <div className={`schedule-val mono ${isActive ? 'timer-green' : ''}`}>
+                  {isActive ? `⏱️ ${fmtElapsed(loc.elapsedSeconds || 0)}` : (loc.nextRun || 'Awaiting Schedule')}
+                </div>
+                <div className="schedule-rule">Peak-Hour Autonomous Engine</div>
+              </div>
+
+              {/* 5. Alarms & Launch Action */}
+              <div className="card-col-actions">
+                <div className={`alarm-indicator-badge ${alarmCount > 0 ? 'has-alarm' : 'clean'}`}>
+                  {alarmCount > 0 ? (
+                    <>
+                      <span className="alarm-dot-pulse"></span>
+                      <b>{alarmCount}</b> {alarmCount === 1 ? 'Open Alarm' : 'Open Alarms'}
+                    </>
+                  ) : (
+                    <>
+                      <span className="clean-check">✓</span> 0 Alarms
+                    </>
+                  )}
+                </div>
+
+                <button
+                  className="card-launch-dashboard-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenCorridor(loc.id);
+                  }}
+                >
+                  Open Dashboard →
+                </button>
+              </div>
+
+            </div>
+          );
+        })}
+      </div>
+
     </div>
   );
 }
-

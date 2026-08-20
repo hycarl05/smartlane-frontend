@@ -184,88 +184,46 @@ export default function AuditLogDisplay({
   };
 
   if (compact) {
+    const displayLogs = sortedLogs.slice(0, 4);
+
     return (
-      <div className="audit-compact-panel">
-        <div className="panel-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span>🛡️</span> Audit Trail & Log
-          </span>
-          <span className="compact-badge-lock" title="Read-Only & Protected">🔒 Read-Only</span>
-        </div>
-
-        <div className="audit-compact-toolbar">
-          <div className="audit-search-box compact">
-            <span className="search-icon">🔍</span>
-            <input
-              type="text"
-              placeholder="Search logs..."
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-            />
-            {searchTerm && (
-              <button className="clear-search-btn" onClick={() => setSearchTerm('')}>×</button>
-            )}
-          </div>
-          <div className="compact-btn-row">
-            <button className="mini-action-btn" onClick={handleExportCSV} title="Export CSV">CSV</button>
-            <button className="mini-action-btn" onClick={handleExportPDF} title="Export PDF">PDF</button>
-            <button className="mini-action-btn primary" onClick={() => setShowReportModal(true)} title="Generate Formal Report">Report</button>
-          </div>
-        </div>
-
-        <div className="audit-compact-list">
-          {paginatedLogs.length === 0 ? (
-            <div className="compact-empty">
-              <span>🔍</span> No matching audit records
+      <div className="audit-compact-feed-wrap">
+        <div className="audit-compact-feed-list">
+          {displayLogs.length === 0 ? (
+            <div className="compact-empty-feed">
+              <span style={{ fontSize: '16px' }}>🛡️</span>
+              <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-faint)' }}>All systems normal • No active alerts</p>
             </div>
           ) : (
-            paginatedLogs.map((log) => {
+            displayLogs.map((log) => {
               const resLower = (log.result || 'success').toLowerCase();
+              const isGood = resLower === 'success' || resLower === 'good';
+              const isWarn = resLower === 'warning' || resLower === 'paused';
               return (
                 <div
                   key={log.id}
-                  className="compact-log-item"
+                  className="compact-log-feed-card"
                   onClick={() => setSelectedAuditLog(log)}
+                  title="Click to inspect audit record"
                 >
-                  <div className="cli-header">
-                    <span className="cli-time">{log.time}</span>
-                    <span className="cli-module">{log.module}</span>
-                    <span className={`result-badge status-${resLower} mini`}>
-                      {log.result}
+                  <div className="cl-top-row">
+                    <span className="cl-time mono">{log.time || log.timestamp?.slice(11, 19)}</span>
+                    <span className="cl-module-tag">{log.module}</span>
+                    <span className={`cl-status-dot ${isGood ? 'good' : isWarn ? 'warn' : 'bad'}`}>
+                      ● {log.result}
                     </span>
                   </div>
-                  <div className="cli-activity">{log.activity}</div>
-                  <div className="cli-footer">
-                    <span className="cli-user">👤 {log.initiator}</span>
+                  <div className="cl-action-text">{log.activity}</div>
+                  <div className="cl-meta-row">
+                    <span className="cl-user">👤 {log.initiator}</span>
                     {log.equipmentId && log.equipmentId !== 'N/A' && (
-                      <span className="cli-equip">{log.equipmentId}</span>
+                      <span className="cl-eq-tag">{log.equipmentId}</span>
                     )}
                   </div>
                 </div>
               );
             })
           )}
-        </div>
-
-        <div className="compact-pagination-bar">
-          <span className="cp-text">{sortedLogs.length} events</span>
-          <div className="cp-btns">
-            <button
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              className="cp-btn"
-            >
-              ‹ Prev
-            </button>
-            <span className="cp-num">{currentPage}/{totalPages}</span>
-            <button
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              className="cp-btn"
-            >
-              Next ›
-            </button>
-          </div>
         </div>
 
         {/* AUDIT LOG DETAIL INSPECTOR MODAL */}
@@ -311,7 +269,7 @@ export default function AuditLogDisplay({
 
                 <div className="detail-item">
                   <span className="detail-lbl">Operation Result</span>
-                  <span className={`result-badge status-${selectedAuditLog.result.toLowerCase()}`}>
+                  <span className={`result-badge status-${(selectedAuditLog.result || 'success').toLowerCase()}`}>
                     {selectedAuditLog.result}
                   </span>
                 </div>
