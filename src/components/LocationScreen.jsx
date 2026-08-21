@@ -38,6 +38,7 @@ export default function LocationScreen({
   const [reportType, setReportType] = useState(0);
   const [reportPeriod, setReportPeriod] = useState('Weekly');
   const [logState, setLogState] = useState(LOG_ENTRIES);
+  const [showPhaseReportModal, setShowPhaseReportModal] = useState(false);
 
   // VMS Editor Modal State
   const [showVmsEditor, setShowVmsEditor] = useState(false);
@@ -148,6 +149,22 @@ export default function LocationScreen({
     });
     addLogEntry('operation', `Phase 4 Deactivation: Smartlane CLOSED on ${loc.name}`);
     onShowToast(`Phase 4 Deactivated: Smartlane CLOSED`);
+  };
+
+  const handleStartPhase5Report = () => {
+    onUpdateLoc(loc.id, {
+      status: 'inactive',
+      phase: 5,
+      phaseLabel: 'Phase 5: Post-Activation & Reporting',
+      phaseTimer: 0,
+      timestamps: {
+        ...(loc.timestamps || {}),
+        p5PostDeactivation: time
+      }
+    });
+    addLogEntry('operation', `Entered Phase 5: Post-Activation Report for ${loc.name}`);
+    onShowToast(`Phase 5: Operational Report Ready`);
+    setShowPhaseReportModal(true);
   };
 
   const handlePauseReason = (reason) => {
@@ -284,11 +301,11 @@ export default function LocationScreen({
                   <div className="panel-title">
                     <span>Operation Control</span>
                     <span className={`op-phase-badge phase-${loc.phase || 0}`}>
-                      {loc.phase === 1 ? 'Phase 1' :
-                        loc.phase === 2 ? 'Phase 2' :
-                          loc.phase === 3 ? 'Phase 3' :
-                            loc.phase === 4 ? 'Phase 4' :
-                              loc.phase === 5 ? 'Phase 5' : 'Standby'}
+                      {loc.phase === 1 ? 'Phase 1: Pre-Start' :
+                        loc.phase === 2 ? 'Phase 2: Start' :
+                          loc.phase === 3 ? 'Phase 3: Pre-Stop' :
+                            loc.phase === 4 ? 'Phase 4: Stop' :
+                              loc.phase === 5 ? 'Phase 5: Report' : 'Standby'}
                     </span>
                   </div>
 
@@ -303,25 +320,84 @@ export default function LocationScreen({
                     </div>
                   )}
 
-                  {/* STATUS DISPLAY */}
-                  <div className={`op-status ${loc.status}`}>
-                    <div className="big-dot"></div>
-                    <div className="op-status-text">
-                      {loc.phase === 1 ? 'PHASE 1: PRE-ACTIVATION' :
-                        loc.phase === 2 ? 'PHASE 2: ACTIVE OPERATION' :
-                          loc.phase === 3 ? 'PHASE 3: PRE-DEACTIVATION' :
-                            loc.phase === 4 ? 'PHASE 4: DEACTIVATING' :
-                              loc.phase === 5 ? 'PHASE 5: POST-ACTIVATION' : 'STANDBY / INACTIVE'}
-                      <small>{loc.phaseLabel || 'Standby Mode'}</small>
+                  {/* ── SINGLE-PHASE OPERATIONAL CONTROL UI ── */}
+                  <div className="simple-op-container">
+                    
+                    {/* 1. Current Active Phase Card */}
+                    <div className={`simple-phase-card phase-${loc.phase || 0}`}>
+                      <div className="phase-indicator-dot"></div>
+                      <div className="phase-card-info">
+                        <div className="phase-title">
+                          {loc.phase === 1 ? 'PRE-START WARNING' :
+                            loc.phase === 2 ? 'ACTIVE OPERATION' :
+                              loc.phase === 3 ? 'PRE-STOP WARNING' :
+                                loc.phase === 4 ? 'SMARTLANE CLOSED' :
+                                  loc.phase === 5 ? 'REPORT READY' : 'STANDBY MODE'}
+                        </div>
+                        <div className="phase-subtext">
+                          {loc.phase === 1 ? '3-minute pre-activation warning cycle' :
+                            loc.phase === 2 ? 'Emergency lane OPEN for traffic' :
+                              loc.phase === 3 ? '3-minute closure warning cycle' :
+                                loc.phase === 4 ? 'Smartlane closed — LCS Red X' :
+                                  loc.phase === 5 ? 'Operational report generated' : 'Smartlane inactive'}
+                        </div>
+                      </div>
+
+                      {(loc.phase === 1 || loc.phase === 3) && (loc.phaseTimer > 0) && (
+                        <div className="phase-countdown-chip">
+                          ⏳ <b>{Math.floor(loc.phaseTimer / 60)}m {loc.phaseTimer % 60}s</b>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 2. Single Primary Action Button for Current Phase */}
+                    <div className="single-phase-action-bar">
+                      {(loc.phase === 0 || !loc.phase) && (
+                        <button className="single-action-btn btn-green-main" onClick={handleStartPhase1}>
+                          <span className="icon">▶</span> START SMARTLANE
+                        </button>
+                      )}
+
+                      {loc.phase === 1 && (
+                        <div className="two-btn-row">
+                          <button className="single-action-btn btn-green-main" onClick={handleStartPhase2Now}>
+                            <span className="icon">⏩</span> CONFIRM START
+                          </button>
+                          <button className="single-action-btn btn-red-sub" onClick={handleDismissPrompt}>
+                            <span className="icon">🛑</span> CANCEL
+                          </button>
+                        </div>
+                      )}
+
+                      {loc.phase === 2 && (
+                        <button className="single-action-btn btn-red-main" onClick={handleStartPhase3Deactivation}>
+                          <span className="icon">🛑</span> STOP SMARTLANE
+                        </button>
+                      )}
+
+                      {loc.phase === 3 && (
+                        <div className="two-btn-row">
+                          <button className="single-action-btn btn-red-main" onClick={handleDeactivatePhase4And5}>
+                            <span className="icon">🛑</span> CONFIRM STOP
+                          </button>
+                          <button className="single-action-btn btn-blue-sub" onClick={handleStartPhase2Now}>
+                            <span className="icon">↺</span> RESUME
+                          </button>
+                        </div>
+                      )}
+
+                      {(loc.phase === 4 || loc.phase === 5) && (
+                        <div className="two-btn-row">
+                          <button className="single-action-btn btn-purple-main" onClick={handleStartPhase5Report}>
+                            <span className="icon">📊</span> VIEW REPORT
+                          </button>
+                          <button className="single-action-btn btn-gray-sub" onClick={handleDismissPrompt}>
+                            <span className="icon">🔄</span> RESET
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {(loc.phase === 1 || loc.phase === 3) && (loc.phaseTimer > 0) && (
-                    <div className="phase-timer-banner">
-                      <span className="timer-icon">⏳</span>
-                      <span>Automated Cycle: <b>{Math.floor(loc.phaseTimer / 60)}m {loc.phaseTimer % 60}s</b> remaining</span>
-                    </div>
-                  )}
 
                   {/* Compact Facts Row */}
                   <div className="op-facts">
@@ -817,6 +893,84 @@ export default function LocationScreen({
           onLogAudit={addLogEntry}
           onShowToast={onShowToast}
         />
+      )}
+
+      {/* PHASE 5 OPERATIONAL SUMMARY REPORT MODAL */}
+      {showPhaseReportModal && (
+        <div className="modal-overlay show" onClick={() => setShowPhaseReportModal(false)}>
+          <div className="modal-content phase-report-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>📊 Phase 5 Operational Summary Report</h2>
+              <button className="close-btn" onClick={() => setShowPhaseReportModal(false)}>✕</button>
+            </div>
+
+            <div className="modal-body">
+              <div className="report-header-card">
+                <div className="report-loc-name">{loc.name}</div>
+                <div className="report-direction">Direction: <b>{loc.direction}</b></div>
+                <div className="report-status-badge phase-5">Phase 5 Complete</div>
+              </div>
+
+              <div className="report-metrics-grid">
+                <div className="metric-box">
+                  <span className="lbl">Total Active Duration</span>
+                  <span className="val">{fmtElapsed(loc.elapsedSeconds || 10800)}</span>
+                </div>
+                <div className="metric-box">
+                  <span className="lbl">Traffic Processed</span>
+                  <span className="val">14,250 veh</span>
+                </div>
+                <div className="metric-box">
+                  <span className="lbl">Avg Speed in Lane</span>
+                  <span className="val">76.8 km/h</span>
+                </div>
+                <div className="metric-box">
+                  <span className="lbl">Level of Service</span>
+                  <span className="val good">LOS {loc.los || 'A'}</span>
+                </div>
+              </div>
+
+              <div className="report-section-title">⏱️ Operational Phase Timestamps</div>
+              <div className="report-timestamps-list">
+                <div className="t-row">
+                  <span>Phase 1 (Pre-Start Warning):</span>
+                  <b>{loc.timestamps?.p1PreActivation || '14:00:00'}</b>
+                </div>
+                <div className="t-row">
+                  <span>Phase 2 (Start / Active Operation):</span>
+                  <b>{loc.timestamps?.p2Activation || '14:03:00'}</b>
+                </div>
+                <div className="t-row">
+                  <span>Phase 3 (Pre-Stop Closure Warning):</span>
+                  <b>{loc.timestamps?.p3PreDeactivation || '17:27:00'}</b>
+                </div>
+                <div className="t-row">
+                  <span>Phase 4 (Stop / LCS Red X):</span>
+                  <b>{loc.timestamps?.p4Deactivation || '17:30:00'}</b>
+                </div>
+                <div className="t-row">
+                  <span>Phase 5 (Post-Activation Report):</span>
+                  <b>{loc.timestamps?.p5PostDeactivation || time}</b>
+                </div>
+              </div>
+
+              <div className="report-section-title">📡 Connected Equipment Telemetry Audit</div>
+              <div className="report-equip-status">
+                <div className="eq-item">LCS Gantries: <b className="good">100% Operational (Synced to Red X on Close)</b></div>
+                <div className="eq-item">VMS Displays: <b className="good">100% Synced (Broadcast Phase 1-5 Messages)</b></div>
+                <div className="eq-item">CCTV Feed: <b className="good">No Emergency Obstructions Detected</b></div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="action-btn secondary" onClick={() => setShowPhaseReportModal(false)}>Close</button>
+              <button className="action-btn primary" onClick={() => {
+                onShowToast('Phase 5 Operational Report exported to PDF');
+                setShowPhaseReportModal(false);
+              }}>🖨️ Export PDF / Print</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

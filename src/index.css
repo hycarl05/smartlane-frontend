@@ -8219,4 +8219,627 @@ button {
   box-shadow: 0 4px 14px rgba(2, 132, 199, 0.55);
 }
 
+/* ==========================================
+   5-PHASE OPERATIONAL CONTROL PIPELINE STYLES
+   ========================================== */
+.phase-stepper-container {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  backdrop-filter: blur(8px);
+}
+
+.phase-stepper-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.phase-stepper-head .p-title {
+  font-family: var(--font-display, sans-serif);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.phase-stepper-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.phase-step-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: 0;
+}
+
+.phase-step-node:hover {
+  background: rgba(51, 65, 85, 0.9);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.phase-step-node.active {
+  border-color: #38bdf8;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(3, 105, 161, 0.35));
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+
+.phase-step-node.active.phase-node-1 {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(180, 83, 9, 0.35));
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+}
+
+.phase-step-node.active.phase-node-2 {
+  border-color: #10b981;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(4, 120, 87, 0.35));
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+}
+
+.phase-step-node.active.phase-node-3 {
+  border-color: #f97316;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.25), rgba(194, 65, 12, 0.35));
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.35);
+}
+
+.phase-step-node.active.phase-node-4 {
+  border-color: #ef4444;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(185, 28, 28, 0.35));
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
+}
+
+.phase-step-node.active.phase-node-5 {
+  border-color: #8b5cf6;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(109, 40, 217, 0.35));
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.35);
+}
+
+.phase-step-node.completed {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(56, 189, 248, 0.2);
+  color: #cbd5e1;
+}
+
+.phase-step-node .step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.phase-step-node.active .step-num {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.phase-step-node .step-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  overflow: hidden;
+}
+
+.phase-step-node .step-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.phase-step-node .step-sub {
+  font-size: 9px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.phase-step-node.active .step-sub {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.phase-step-line {
+  height: 2px;
+  width: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.phase-step-line.completed {
+  background: #0284c7;
+}
+
+/* Action buttons group */
+.phase-action-buttons-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.phase-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  border: 1px solid transparent;
+}
+
+.phase-action-btn:hover {
+  transform: translateY(-2px);
+}
+
+.phase-action-btn .btn-icon {
+  font-size: 18px;
+}
+
+.phase-action-btn .btn-txt {
+  display: flex;
+  flex-direction: column;
+}
+
+.phase-action-btn .main-t {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.phase-action-btn .sub-t {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+/* Button colors */
+.btn-prestart {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35);
+}
+
+.btn-start {
+  background: linear-gradient(135deg, #059669, #047857);
+  border-color: rgba(16, 185, 129, 0.6);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+}
+
+.btn-prestop {
+  background: linear-gradient(135deg, #ea580c, #c2410c);
+  border-color: rgba(249, 115, 22, 0.6);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);
+}
+
+.btn-stop {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+}
+
+.btn-report {
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  border-color: rgba(139, 92, 246, 0.6);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+}
+
+/* Telemetry feedback banner */
+.phase-telemetry-banner {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.phase-telemetry-banner .tel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.phase-telemetry-banner .tel-label {
+  color: #94a3b8;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  width: 105px;
+  flex-shrink: 0;
+}
+
+.phase-telemetry-banner .tel-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.phase-telemetry-banner .tel-badge.open {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.phase-telemetry-banner .tel-badge.closed {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.phase-telemetry-banner .tel-badge.warn {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.phase-telemetry-banner .tel-vms-msg {
+  color: #f8fafc;
+  font-weight: 700;
+  font-family: monospace;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border-left: 3px solid #f59e0b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Phase 5 Report Modal */
+.phase-report-modal {
+  width: 540px;
+  max-width: 95vw;
+}
+
+.report-header-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.report-loc-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.report-direction {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.report-status-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(139, 92, 246, 0.25);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  color: #c084fc;
+}
+
+.report-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.report-metrics-grid .metric-box {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.report-metrics-grid .metric-box .lbl {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.report-metrics-grid .metric-box .val {
+  font-size: 15px;
+  font-weight: 800;
+  color: #f8fafc;
+  margin-top: 2px;
+}
+
+.report-section-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.report-timestamps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 14px;
+}
+
+.report-timestamps-list .t-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.report-timestamps-list .t-row b {
+  color: #f8fafc;
+}
+
+.report-equip-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.report-equip-status .good {
+  color: #34d399;
+}
+
+/* ==========================================
+   SIMPLE OPERATIONAL CONTROL PANEL STYLES
+   ========================================== */
+.simple-op-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.simple-phase-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.simple-phase-card .phase-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748b;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(100, 116, 139, 0.5);
+}
+
+.simple-phase-card.phase-1 .phase-indicator-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+  animation: pulseGlow 1.2s infinite;
+}
+
+.simple-phase-card.phase-2 .phase-indicator-dot {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.simple-phase-card.phase-3 .phase-indicator-dot {
+  background: #f97316;
+  box-shadow: 0 0 8px #f97316;
+  animation: pulseGlow 1.2s infinite;
+}
+
+.simple-phase-card.phase-4 .phase-indicator-dot {
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+.simple-phase-card.phase-5 .phase-indicator-dot {
+  background: #8b5cf6;
+  box-shadow: 0 0 8px #8b5cf6;
+}
+
+.simple-phase-card .phase-card-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.simple-phase-card .phase-title {
+  font-family: var(--font-display, sans-serif);
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #f8fafc;
+  letter-spacing: 0.02em;
+}
+
+.simple-phase-card .phase-subtext {
+  font-size: 9.5px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+.simple-phase-card .phase-countdown-chip {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Simple Telemetry Card */
+.simple-telemetry-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.simple-telemetry-card .tel-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+}
+
+.simple-telemetry-card .t-lbl {
+  color: #94a3b8;
+  font-size: 9.5px;
+  font-weight: 700;
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.simple-telemetry-card .t-val {
+  font-weight: 800;
+  font-size: 10.5px;
+}
+
+.simple-telemetry-card .t-val.green {
+  color: #34d399;
+}
+
+.simple-telemetry-card .t-val.amber {
+  color: #fbbf24;
+}
+
+.simple-telemetry-card .t-val.red {
+  color: #f87171;
+}
+
+.simple-telemetry-card .t-vms {
+  color: #f8fafc;
+  font-weight: 700;
+  font-family: monospace;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border-left: 3px solid #f59e0b;
+}
+
+/* Single Phase Action Bar */
+.single-phase-action-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.two-btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.single-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  color: #ffffff;
+}
+
+.single-action-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+}
+
+.btn-green-main {
+  background: linear-gradient(135deg, #059669, #047857);
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+}
+
+.btn-red-main {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.btn-purple-main {
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  border-color: rgba(139, 92, 246, 0.6);
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+
+.btn-red-sub {
+  background: rgba(220, 38, 38, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.btn-blue-sub {
+  background: rgba(2, 132, 199, 0.2);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+}
+
+.btn-gray-sub {
+  background: rgba(71, 85, 105, 0.3);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #cbd5e1;
+}
+
 
