@@ -23,67 +23,65 @@ export default function LoginScreen({ onLogin }) {
         onLogin({ name: 'System Admin', username: 'admin', role: 'Control Centre Admin' });
       } else {
         setIsLoading(false);
-        setError('Invalid username or password (use admin / admin123)');
+        setError('Invalid credentials. Use admin / admin123');
       }
-    }, 600);
+    }, 500);
   };
 
   return (
-    <div className="split-login-container">
-      {/* LEFT: Image Visual Panel */}
-      <div className="login-image-side">
-        <div className="login-image-overlay"></div>
-        <img
-          src="/hero.jpg"
-          alt="PLUS Smartlane Highway Traffic Control"
-          className="login-bg-img"
-        />
-        <div className="image-side-content">
-          <div className="hero-badge">
-            <span className="live-pulse"></span> PLUS INTELLIGENT TRAFFIC SYSTEM
+    <div className="screen active" id="screen-login" style={{ display: 'flex', flexDirection: 'row', height: '100vh', width: '100vw' }}>
+      {/* Visual Side */}
+      <div className="login-visual">
+        <div className="sun-badge">
+          <span className="lp"></span>PLUS INTELLIGENT TRAFFIC SYSTEM
+        </div>
+        <div className="login-road">
+          <svg viewBox="0 0 520 150" preserveAspectRatio="none">
+            <path d="M0,120 Q130,60 260,95 T520,70" stroke="#CBD9EE" strokeWidth="16" fill="none" strokeLinecap="round" />
+            <path d="M0,120 Q130,60 260,95 T520,70" stroke="#fff" strokeWidth="2" strokeDasharray="14 16" fill="none" opacity="0.9" />
+            <circle cx="30" cy="113" r="5" fill="#0D9488" />
+            <circle cx="170" cy="78" r="5" fill="#0D9488" />
+            <circle cx="300" cy="98" r="5" fill="#0D9488" />
+            <circle cx="430" cy="80" r="5" fill="#0D9488" />
+          </svg>
+        </div>
+        <h1>PLUS SMARTLANE Control Centre</h1>
+        <p>Real-time emergency lane dynamic activation, LCS gantry automation &amp; incident response.</p>
+        <div className="hero-stats-row">
+          <div className="hero-stat">
+            <span className="stat-val">8</span>
+            <span className="stat-lbl">Active Corridors</span>
           </div>
-          <h1 className="hero-title">Automated Smartlane Management</h1>
-          <p className="hero-description">
-            Real-time highway congestion monitoring, automated LCS gantry control &amp; incident dispatch across key Malaysian expressways.
-          </p>
-          <div className="hero-stats-row">
-            <div className="hero-stat">
-              <span className="stat-val">4</span>
-              <span className="stat-lbl">Active Corridors</span>
-            </div>
-            <div className="hero-stat">
-              <span className="stat-val">24/7</span>
-              <span className="stat-lbl">Gantry Operations</span>
-            </div>
-            <div className="hero-stat">
-              <span className="stat-val">99.8%</span>
-              <span className="stat-lbl">System Uptime</span>
-            </div>
+          <div className="hero-stat">
+            <span className="stat-val">99.4%</span>
+            <span className="stat-lbl">Sensor Uptime</span>
+          </div>
+          <div className="hero-stat">
+            <span className="stat-val">&lt;2min</span>
+            <span className="stat-lbl">Incident Response</span>
           </div>
         </div>
       </div>
 
-      {/* RIGHT: Login Form Panel */}
+      {/* Form Side */}
       <div className="login-form-side">
-        <div className="login-form-box">
+        <div className="login-box">
           <div className="login-brand">
-            <div className="brand-mark large">P</div>
+            <div className="brand-mark">P</div>
             <div className="brand-text">
-              <b>SMARTLANE CONTROL CENTRE</b>
-              <span>PLUS MALAYSIA · A MEMBER OF UEM</span>
+              <b>PLUS SMARTLANE</b>
+              <span>CONTROL CENTRE · DAYLIGHT UI</span>
             </div>
           </div>
 
-          <div className="login-header">
-            <h2>Administrator Sign In</h2>
-            <p>Enter your authorized credentials to access live traffic controls</p>
-          </div>
+          <h2>Sign in to Control Centre</h2>
+          <p className="sub">Authorized highway operations &amp; engineering access only</p>
 
-          {error && <div className="login-error-alert">{error}</div>}
+          {error && <div className="login-error">{error}</div>}
 
-          <form onSubmit={handleSubmit} className="login-form">
+          <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label htmlFor="username">Username or Staff ID</label>
+              <label htmlFor="username">Staff ID / Username</label>
               <input
                 id="username"
                 type="text"
@@ -109,17 +107,17 @@ export default function LoginScreen({ onLogin }) {
             </div>
 
             <div className="login-hint">
-              <span>Demo Credentials:</span> <code>admin</code> / <code>admin123</code>
+              Demo access: <code>admin</code> / <code>admin123</code>
             </div>
 
-            <button type="submit" className="login-submit-btn" disabled={isLoading}>
+            <button type="submit" className="login-submit" disabled={isLoading}>
               {isLoading ? 'Authenticating...' : 'Sign In to Control Centre →'}
             </button>
           </form>
 
           <div className="login-footer">
-            <span>PLUS Smartlane Infrastructure v2.4</span>
-            <span>Encrypted Session · Secured Portal</span>
+            <span>PLUS Malaysia Berhad · v2.4</span>
+            <span>Secured Session</span>
           </div>
         </div>
       </div>

@@ -931,7 +931,7 @@ export default function RoadLayoutDesigner({
     if (onShowToast) onShowToast('Road line selected! You can adjust node coordinates or drag points on the grid.');
   }, [onShowToast, updateWaypointHandles]);
 
-  // Apply Quick Curvature Presets
+  // Apply 2 Editable Road Shapes: Horizontal and Vertical
   const handleApplyCurveShape = useCallback((shapeType) => {
     const c = fabricCanvasRef.current;
     if (!c) return;
@@ -940,43 +940,22 @@ export default function RoadLayoutDesigner({
     const h = stage?.clientHeight || 550;
     const startX = 80;
     const endX = w - 80;
+    const midX = Math.round(w * 0.5);
     const midY = Math.round(h * 0.48);
 
     let newPts = [];
-    if (shapeType === 'straight') {
+    if (shapeType === 'vertical') {
+      newPts = [
+        { x: midX, y: Math.max(60, h - 80) },
+        { x: midX, y: Math.round(h * 0.5) },
+        { x: midX, y: 80 }
+      ];
+    } else {
+      // default: horizontal
       newPts = [
         { x: startX, y: midY },
         { x: Math.round(startX + (endX - startX) * 0.5), y: midY },
         { x: endX, y: midY }
-      ];
-    } else if (shapeType === 'scurve') {
-      newPts = [
-        { x: startX, y: midY + 70 },
-        { x: Math.round(startX + (endX - startX) * 0.28), y: midY - 90 },
-        { x: Math.round(startX + (endX - startX) * 0.52), y: midY + 50 },
-        { x: Math.round(startX + (endX - startX) * 0.76), y: midY - 80 },
-        { x: endX, y: midY }
-      ];
-    } else if (shapeType === 'arc-up') {
-      newPts = [
-        { x: startX, y: midY + 80 },
-        { x: Math.round(startX + (endX - startX) * 0.3), y: midY - 70 },
-        { x: Math.round(startX + (endX - startX) * 0.7), y: midY - 70 },
-        { x: endX, y: midY + 80 }
-      ];
-    } else if (shapeType === 'arc-down') {
-      newPts = [
-        { x: startX, y: midY - 80 },
-        { x: Math.round(startX + (endX - startX) * 0.3), y: midY + 70 },
-        { x: Math.round(startX + (endX - startX) * 0.7), y: midY + 70 },
-        { x: endX, y: midY - 80 }
-      ];
-    } else if (shapeType === 'elevated') {
-      newPts = [
-        { x: startX, y: midY + 60 },
-        { x: Math.round(startX + (endX - startX) * 0.35), y: midY - 110 },
-        { x: Math.round(startX + (endX - startX) * 0.65), y: midY + 80 },
-        { x: endX, y: midY - 40 }
       ];
     }
 
@@ -1000,7 +979,7 @@ export default function RoadLayoutDesigner({
     });
 
     initTrafficParticles();
-    if (onShowToast) onShowToast(`Applied ${shapeType} road curve alignment.`);
+    if (onShowToast) onShowToast(`Applied ${shapeType === 'vertical' ? 'Vertical' : 'Horizontal'} road line shape.`);
   }, [distKm, initTrafficParticles, onShowToast, renderRoadMesh, updateWaypointHandles]);
 
   // Shift whole road
@@ -1718,45 +1697,44 @@ export default function RoadLayoutDesigner({
           </div>
 
           {/* Section 2: Road Alignment & Path */}
+          {/* Section 2: Road Alignment & Path (2 Editable Shapes) */}
           <div className="panel-section-rich">
             <div className="section-title-rich">
               <span className="num-badge">2</span>
-              <span>Road Geometry</span>
+              <span>Road Shape &amp; Alignment</span>
               {mode === 'editing-nodes' && <span className="arming-tag" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', borderColor: '#F59E0B' }}>Drag Yellow Nodes</span>}
             </div>
 
-            <div className="draw-buttons-deck">
+            {/* 2 Primary Editable Road Shapes */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
               <button
-                className={`cad-btn-main ${mode === 'drawing' ? 'active-pulse' : ''}`}
-                onClick={handleStartDraw}
+                className="cad-btn-main"
+                onClick={() => handleApplyCurveShape('horizontal')}
+                style={{ padding: '8px 4px', fontSize: '11px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}
+                title="Create Horizontal Straight Road Line (West to East)"
               >
-                ✏️ Draw New Path
+                <span style={{ fontSize: '14px', fontWeight: 800 }}>────</span>
+                <span style={{ fontSize: '9.5px' }}>Horizontal Line</span>
               </button>
               <button
-                className="cad-btn-main finish"
-                onClick={handleFinishDraw}
-                disabled={mode !== 'drawing' && roadPointsRef.current.length < 2}
+                className="cad-btn-main"
+                onClick={() => handleApplyCurveShape('vertical')}
+                style={{ padding: '8px 4px', fontSize: '11px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}
+                title="Create Vertical Straight Road Line (South to North)"
               >
-                ✅ Finish Road
+                <span style={{ fontSize: '14px', fontWeight: 800 }}>│</span>
+                <span style={{ fontSize: '9.5px' }}>Vertical Line</span>
               </button>
             </div>
 
-            <div className="draw-sub-actions">
-              <button
-                className={`sub-action-chip ${isRoadSelected ? 'active' : ''}`}
-                onClick={handleSelectRoad}
-                disabled={!isRoadFinished}
-                title="Select road and open manual coordinate inspector"
-              >
-                🖱️ Select Road
-              </button>
+            <div className="draw-sub-actions" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
               <button
                 className={`sub-action-chip ${mode === 'editing-nodes' ? 'active' : ''}`}
                 onClick={() => {
                   setMode(mode === 'editing-nodes' ? 'idle' : 'editing-nodes');
                 }}
                 disabled={!isRoadFinished}
-                title="Click to show draggable vertex handles on the road curve"
+                title="Click to show draggable vertex handles on the road line"
               >
                 📐 Adjust Nodes
               </button>
@@ -1764,7 +1742,7 @@ export default function RoadLayoutDesigner({
                 className="sub-action-chip"
                 onClick={handleAddCurvePoint}
                 disabled={!isRoadFinished}
-                title="Add a new bending point along the road curve"
+                title="Add a new point along the road line"
               >
                 ➕ Add Point
               </button>
@@ -1778,39 +1756,11 @@ export default function RoadLayoutDesigner({
               </button>
             </div>
 
-            {/* Quick Road Alignment Curvatures */}
+            {/* Move Whole Road D-Pad */}
             {isRoadFinished && (
-              <div className="quick-curves-box" style={{ marginTop: '8px', padding: '8px', background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(51, 65, 85, 0.6)', borderRadius: '8px' }}>
-                <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '5px', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Manual Curve Shapes</span>
-                  <span style={{ color: '#38BDF8' }}>1-Click Shape</span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px', marginBottom: '6px' }}>
-                  <button className="curve-shape-btn" onClick={() => handleApplyCurveShape('straight')} title="Straight Line">
-                    <span style={{ fontSize: '12px' }}>─</span>
-                    <small style={{ fontSize: '8px' }}>Flat</small>
-                  </button>
-                  <button className="curve-shape-btn" onClick={() => handleApplyCurveShape('scurve')} title="S-Curve Expressway">
-                    <span style={{ fontSize: '12px' }}>〰</span>
-                    <small style={{ fontSize: '8px' }}>S-Curve</small>
-                  </button>
-                  <button className="curve-shape-btn" onClick={() => handleApplyCurveShape('arc-up')} title="Arc Curve Left / Up">
-                    <span style={{ fontSize: '12px' }}>╭─</span>
-                    <small style={{ fontSize: '8px' }}>Arc ↑</small>
-                  </button>
-                  <button className="curve-shape-btn" onClick={() => handleApplyCurveShape('arc-down')} title="Arc Curve Right / Down">
-                    <span style={{ fontSize: '12px' }}>╰─</span>
-                    <small style={{ fontSize: '8px' }}>Arc ↓</small>
-                  </button>
-                  <button className="curve-shape-btn" onClick={() => handleApplyCurveShape('elevated')} title="Elevated Flyover Wave">
-                    <span style={{ fontSize: '12px' }}>〜</span>
-                    <small style={{ fontSize: '8px' }}>Wave</small>
-                  </button>
-                </div>
-
-                {/* Move Whole Road D-Pad */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(51, 65, 85, 0.5)', paddingTop: '5px' }}>
-                  <span style={{ fontSize: '9.5px', color: '#64748B' }}>Shift Entire Road:</span>
+              <div style={{ marginTop: '8px', padding: '6px 8px', background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(51, 65, 85, 0.6)', borderRadius: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '9.5px', color: '#94A3B8' }}>Shift Road:</span>
                   <div style={{ display: 'flex', gap: '3px' }}>
                     <button className="shift-dpad-btn" onClick={() => handleShiftRoad(-25, 0)} title="Shift Left 25px">◀</button>
                     <button className="shift-dpad-btn" onClick={() => handleShiftRoad(25, 0)} title="Shift Right 25px">▶</button>

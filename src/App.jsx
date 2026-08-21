@@ -251,137 +251,16 @@ export default function App() {
   }
 
   return (
-    <div className="app-container cyber-theme-root">
-      {/* ── UNIFIED FUTURISTIC TOPBAR (1 SITE UNIFIED NAVIGATION) ─────── */}
-      <header className="cyber-topbar unified-app-header">
-        {/* Left Brand & Dropdown Corridor Switcher */}
-        <div className="cyber-topbar-left">
-          <div className="cyber-logo-icon">🛣️</div>
-          <div className="cyber-title-wrap">
-            <span className="cyber-brand-en">SMARTLANE ITS PLATFORM</span>
-            <span className="cyber-brand-sub">MALAYSIA EXPRESSWAY TRAFFIC INTELLIGENCE</span>
-          </div>
-
-          {/* Corridor Dropdown (Hidden on Overview page) */}
-          {activeNavTab !== 'overview' && (
-            <div className="corridor-select-capsule">
-              <span className="capsule-label">Corridor:</span>
-              <select
-                value={activeLocId}
-                onChange={(e) => setActiveLocId(e.target.value)}
-                className="corridor-select-field"
-              >
-                {locations.map(loc => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name} ({loc.direction})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-
-        {/* Center: Unified Navigation Tabs (Hidden on Overview page) */}
-        {activeNavTab !== 'overview' && (
-          <nav className="cyber-topbar-nav">
-            <button
-              className={`cyber-nav-item ${activeNavTab === 'overview' ? 'active' : ''}`}
-              onClick={() => setActiveNavTab('overview')}
-            >
-              <span className="nav-icon">📊</span>
-              <span>Overview</span>
-            </button>
-
-            <button
-              className={`cyber-nav-item ${activeNavTab === 'corridor' ? 'active' : ''}`}
-              onClick={() => setActiveNavTab('corridor')}
-            >
-              <span className="nav-icon">🛣️</span>
-              <span>Corridor &amp; CCTV</span>
-            </button>
-
-            <button
-              className={`cyber-nav-item ${activeNavTab === 'vms' ? 'active' : ''}`}
-              onClick={() => setActiveNavTab('vms')}
-            >
-              <span className="nav-icon">📺</span>
-              <span>VMS Control</span>
-            </button>
-
-            <button
-              className={`cyber-nav-item ${activeNavTab === 'schedule' ? 'active' : ''}`}
-              onClick={() => setActiveNavTab('schedule')}
-            >
-              <span className="nav-icon">📅</span>
-              <span>Schedule</span>
-            </button>
-
-            <button
-              className={`cyber-nav-item ${activeNavTab === 'log' ? 'active' : ''}`}
-              onClick={() => setActiveNavTab('log')}
-            >
-              <span className="nav-icon">🚨</span>
-              <span>Alarms &amp; Log</span>
-              {(activeLoc?.alarms?.length > 0 || totalAlarmsCount > 0) && (
-                <span className="nav-alarm-badge">{activeLoc?.alarms?.length || totalAlarmsCount}</span>
-              )}
-            </button>
-
-            <button
-              className={`cyber-nav-item ${activeNavTab === 'reports' ? 'active' : ''}`}
-              onClick={() => setActiveNavTab('reports')}
-            >
-              <span className="nav-icon">📈</span>
-              <span>Reports</span>
-            </button>
-
-            <button
-              className={`cyber-nav-item ${activeNavTab === 'designer' ? 'active' : ''}`}
-              onClick={() => setActiveNavTab('designer')}
-            >
-              <span className="nav-icon">🎨</span>
-              <span>Road Studio</span>
-            </button>
-
-            <button
-              className={`cyber-nav-item ${activeNavTab === 'settings' ? 'active' : ''}`}
-              onClick={() => setActiveNavTab('settings')}
-            >
-              <span className="nav-icon">⚙️</span>
-              <span>Settings</span>
-            </button>
-          </nav>
-        )}
-
-        {/* Right HUD: Weather, Live Clock & User */}
-        <div className="cyber-topbar-right">
-          <div className="weather-hud-pill">
-            <span className="weather-icon">⛅</span>
-            <span className="weather-txt">Sunny 32°C</span>
-          </div>
-
-          <div className="datetime-hud-pill">
-            <span className="time-txt">{clockTime}</span>
-          </div>
-
-          <div className="user-hud-pill">
-            <span className="user-hud-dot"></span>
-            <span className="user-hud-name">{user?.username || 'admin'}</span>
-          </div>
-
-          <button className="cyber-logout-btn" onClick={handleLogout} title="Logout Session">
-            ⏻
-          </button>
-        </div>
-      </header>
-
-      {/* ── UNIFIED APPLICATION STAGE (1 SITE) ────────────────────────── */}
-      <main className="cyber-main-stage">
+    <div className="app-container">
+      <main style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {activeNavTab === 'overview' ? (
           <OverviewScreen
             locations={locations}
             auditLogs={auditLogs}
-            onSelectLocation={handleSelectLocation}
+            onSelectLocation={(locId, tab = 'overview') => {
+              setActiveLocId(locId);
+              setActiveNavTab(tab === 'overview' ? 'corridor' : tab);
+            }}
             activeLocId={activeLocId}
             setActiveLocId={setActiveLocId}
             onNavigateTab={setActiveNavTab}
@@ -393,12 +272,12 @@ export default function App() {
             onShowToast={triggerToast}
           />
         ) : activeNavTab === 'designer' ? (
-          <div className="designer-full-stage">
+          <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column' }}>
             <ErrorBoundary>
               <RoadLayoutDesigner
                 initialLoc={activeLoc}
                 onSaveLayout={handleSaveNewLocation}
-                onClose={() => setActiveNavTab('overview')}
+                onClose={() => setActiveNavTab('corridor')}
                 onShowToast={triggerToast}
               />
             </ErrorBoundary>
@@ -408,9 +287,15 @@ export default function App() {
             loc={activeLoc}
             locations={locations}
             auditLogs={auditLogs}
-            onSelectLocation={handleSelectLocation}
+            onSelectLocation={(locId, tab) => {
+              setActiveLocId(locId);
+              if (tab) setActiveNavTab(tab);
+            }}
             activeTab={activeNavTab === 'corridor' ? 'overview' : activeNavTab}
-            setActiveTab={setActiveNavTab}
+            setActiveTab={(tab) => {
+              if (tab === 'overview') setActiveNavTab('corridor');
+              else setActiveNavTab(tab);
+            }}
             onBack={() => setActiveNavTab('overview')}
             time={clockTime}
             date={clockDate}
@@ -418,7 +303,7 @@ export default function App() {
             onLogout={handleLogout}
             onUpdateLoc={handleUpdateLocation}
             onShowToast={triggerToast}
-            hideTopbars={true}
+            hideTopbars={false}
           />
         )}
       </main>

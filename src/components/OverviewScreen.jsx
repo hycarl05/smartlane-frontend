@@ -1,11 +1,16 @@
 import React from 'react';
+import Topbar from './Topbar';
 import { fmtElapsed } from '../data';
 
 export default function OverviewScreen({
-  locations,
+  locations = [],
   onSelectLocation,
   setActiveLocId,
   onNavigateTab,
+  time,
+  date,
+  user,
+  onLogout
 }) {
   const activeCount = locations.filter(l => l.status === 'active').length;
   const pendingCount = locations.filter(l => l.status === 'pending').length;
@@ -20,212 +25,154 @@ export default function OverviewScreen({
 
   const handleOpenCorridor = (locId) => {
     if (setActiveLocId) setActiveLocId(locId);
-    if (onSelectLocation) onSelectLocation(locId);
+    if (onSelectLocation) onSelectLocation(locId, 'overview');
     if (onNavigateTab) onNavigateTab('corridor');
   };
 
-  const getLosTheme = (los) => {
-    switch (los) {
-      case 'A': return { color: '#10B981', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.4)', text: 'Optimal' };
-      case 'B': return { color: '#34D399', bg: 'rgba(52,211,153,0.15)', border: 'rgba(52,211,153,0.4)', text: 'Stable' };
-      case 'C': return { color: '#FBBF24', bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.4)', text: 'Moderate' };
-      case 'D': return { color: '#F97316', bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.4)', text: 'Heavy' };
-      case 'E': return { color: '#EF4444', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.4)', text: 'Congested' };
-      default: return { color: '#38BDF8', bg: 'rgba(56,189,248,0.15)', border: 'rgba(56,189,248,0.4)', text: 'Normal' };
-    }
+  const getLosClass = (los) => {
+    if (los === 'A' || los === 'B') return 'good';
+    if (los === 'C' || los === 'D') return 'warn';
+    return 'crit';
   };
 
   return (
-    <div className="ov-clean-master-root">
-
-      {/* ── 1. CLEAN HEADER (GIS Map & Draw Layout REMOVED) ─────────── */}
-      <div className="ov-master-top-bar">
-        <div className="ov-title-block">
-          <div className="ov-headline">
-            <span className="ov-live-radar-dot"></span>
-            <h1>All Smartlane Locations</h1>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', background: 'var(--canvas)' }}>
+      <Topbar time={time} date={date} user={user} onLogout={onLogout} />
+      <div className="ov-scroll">
+        {/* ── 1. HEADER ──────────────────────────────────────────────── */}
+        <div className="ov-head">
+          <div>
+            <div className="ov-title">All Smartlane Locations</div>
+            <div className="ov-sub">Select a location to open its live dashboard and controls</div>
           </div>
-          <p className="ov-subheadline">
-            Central Command &amp; Multi-Corridor Operational Roster — Select any corridor to launch its real-time telemetry dashboard.
-          </p>
         </div>
 
-        {/* Quick Summary Pill */}
-        <div className="ov-network-pulse-pill">
-          <span className="pulse-tag">NETWORK STATUS</span>
-          <span className="pulse-val"><b>{activeCount}</b> / {locations.length} Corridors Active</span>
+      {/* ── 2. KPI STRIP (4 TILES) ─────────────────────────────────── */}
+      <div className="kpi-strip">
+        <div className="kpi-tile">
+          <div className="kpi-icon blue">◧</div>
+          <div>
+            <div className="kpi-num">{locations.length}</div>
+            <div className="kpi-lbl">Total locations</div>
+          </div>
+        </div>
+
+        <div className="kpi-tile">
+          <div className="kpi-icon teal">▶</div>
+          <div>
+            <div className="kpi-num">{activeCount}</div>
+            <div className="kpi-lbl">Active now</div>
+          </div>
+        </div>
+
+        <div className="kpi-tile">
+          <div className="kpi-icon amber">!</div>
+          <div>
+            <div className="kpi-num">{pendingCount}</div>
+            <div className="kpi-lbl">Needs attention</div>
+          </div>
+        </div>
+
+        <div className="kpi-tile">
+          <div className="kpi-icon red">⚠</div>
+          <div>
+            <div className="kpi-num">{totalAlarms}</div>
+            <div className="kpi-lbl">Open alarms</div>
+          </div>
         </div>
       </div>
 
-      {/* ── 2. TOP 4 SUMMARY STAT CARDS ──────────────────────────────── */}
-      <div className="ov-stat-deck-row">
-        
-        <div className="ov-stat-pill-box box-total">
-          <div className="stat-pill-icon blue">📊</div>
-          <div className="stat-pill-data">
-            <span className="stat-pill-num">{locations.length}</span>
-            <span className="stat-pill-lbl">Total Locations</span>
-          </div>
-        </div>
-
-        <div className="ov-stat-pill-box box-active">
-          <div className="stat-pill-icon green">▶</div>
-          <div className="stat-pill-data">
-            <span className="stat-pill-num">{activeCount}</span>
-            <span className="stat-pill-lbl">Active Now (Phase 2)</span>
-          </div>
-        </div>
-
-        <div className="ov-stat-pill-box box-pending">
-          <div className="stat-pill-icon amber">!</div>
-          <div className="stat-pill-data">
-            <span className="stat-pill-num">{pendingCount}</span>
-            <span className="stat-pill-lbl">Needs Attention</span>
-          </div>
-        </div>
-
-        <div className="ov-stat-pill-box box-alarms">
-          <div className="stat-pill-icon red">⚠️</div>
-          <div className="stat-pill-data">
-            <span className="stat-pill-num">{totalAlarms}</span>
-            <span className="stat-pill-lbl">Open Alarms</span>
-          </div>
-        </div>
-
-      </div>
-
-      {/* ── 3. LIVE ALARMS BANNER STRIP ──────────────────────────────── */}
+      {/* ── 3. ALERT TICKER ────────────────────────────────────────── */}
       {allAlarms.length > 0 && (
-        <div className="ov-ticker-alarms-bar">
-          <div className="ticker-badge">🚨 ACTIVE ALERTS</div>
-          <div className="ticker-scroll-content">
-            {allAlarms.map((alarm, idx) => (
-              <div
-                key={idx}
-                className="ticker-event-pill"
-                onClick={() => handleOpenCorridor(alarm.locId)}
-                title="Click to view corridor"
-              >
-                <span className={`event-sev-dot ${alarm.sev === 'critical' ? 'crit' : 'warn'}`}></span>
-                <span className="event-title">{alarm.title || alarm.msg}</span>
-                <span className="event-corridor">({alarm.loc} • {alarm.time || '14:31'})</span>
+        <div className="alert-ticker">
+          {allAlarms.map((a, idx) => (
+            <div
+              key={idx}
+              className={`ticker-chip ${a.sev === 'warning' ? 'warn' : ''}`}
+              onClick={() => handleOpenCorridor(a.locId)}
+            >
+              <div>
+                <div className="tt1">{a.title || a.msg}</div>
+                <div className="tt2">{a.loc} · {a.time || '14:31:02'}</div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* ── 4. REDESIGNED HIGH-INTEREST CORRIDOR CARDS (ZERO SCROLL) ──── */}
-      <div className="ov-corridors-deck">
+      {/* ── 4. LOCATIONS LIST ──────────────────────────────────────── */}
+      <div className="loc-list">
         {locations.map((loc) => {
           const alarmCount = loc.alarms ? loc.alarms.length : 0;
           const isActive = loc.status === 'active';
           const isPending = loc.status === 'pending';
-          const losTheme = getLosTheme(loc.los || 'A');
-
-          // Equipment calculation
-          const cctv = loc.equipment?.cctv || [13, 14];
-          const avds = loc.equipment?.avds || [9, 10];
-          const lcs = loc.equipment?.lcs || [12, 12];
-          const vms = loc.equipment?.vms || [2, 2];
-
-          // Speed and traffic simulation based on status
-          const speedVal = isActive ? (loc.trafficFlow?.includes('Congested') ? 68 : 84) : 88;
-          const volumeVal = isActive ? 5420 : (loc.trafficFlow?.includes('Congested') ? 4980 : 3200);
 
           return (
             <div
               key={loc.id}
-              className={`ov-rich-corridor-card state-${loc.status}`}
+              className={`loc-row is-${loc.status}`}
               onClick={() => handleOpenCorridor(loc.id)}
             >
-              {/* Left Accent Glow Bar */}
-              <div className={`card-accent-rail state-${loc.status}`}></div>
-
-              {/* 1. Identity Column */}
-              <div className="card-col-identity">
-                <div className="identity-title-row">
-                  <span className={`identity-live-dot ${isActive ? 'online' : isPending ? 'pending' : 'standby'}`}></span>
-                  <h3 className="corridor-heading">{loc.name}</h3>
-                </div>
-                <div className="identity-tags-row">
-                  <span className="chainage-tag">🛣️ KM {loc.distKm || '8.4'} • {loc.direction || 'NORTHBOUND'}</span>
-                  <span className={`phase-status-pill ${isActive ? 'active' : isPending ? 'pending' : 'standby'}`}>
-                    {isActive ? `PHASE ${loc.phase || 2}: ACTIVE OPERATION` : isPending ? 'PHASE 1: PRE-ACTIVATION' : 'STANDBY / INACTIVE'}
-                  </span>
-                </div>
+              {/* ID & Mini Road Column */}
+              <div className="loc-row-id">
+                <div className="nm">{loc.name}</div>
+                <div className="dr">{loc.direction || 'NORTHBOUND'}</div>
+                <svg className="mini-road" viewBox="0 0 220 34" preserveAspectRatio="none">
+                  <line className="track" x1="6" y1="17" x2="214" y2="17" />
+                  <line className="flow" x1="6" y1="17" x2="214" y2="17" />
+                  {[26, 66, 106, 146, 186].map(x => (
+                    <circle
+                      key={x}
+                      className={`marker ${(isActive || isPending) ? 'on' : ''}`}
+                      cx={x}
+                      cy="17"
+                      r="3.5"
+                    />
+                  ))}
+                </svg>
               </div>
 
-              {/* 2. Level of Service & Speed Deck */}
-              <div className="card-col-traffic">
-                <div className="los-badge-container" style={{ background: losTheme.bg, borderColor: losTheme.border }}>
-                  <span className="los-label">LOS</span>
-                  <span className="los-value" style={{ color: losTheme.color }}>{loc.los || 'A'}</span>
-                </div>
-
-                <div className="traffic-stats-box">
-                  <div className="speed-flow-row">
-                    <span className="speed-big mono">{speedVal} <small>km/h</small></span>
-                    <span className="traffic-state-text" style={{ color: losTheme.color }}>
-                      {loc.trafficFlow || 'Normal Flow'}
-                    </span>
+              {/* Stats Column */}
+              <div className="loc-row-stats">
+                <div className="rstat">
+                  <div className="lbl">Level of service</div>
+                  <div className={`val ${getLosClass(loc.los || 'A')}`}>
+                    {loc.los || 'A'}
                   </div>
-                  <div className="volume-sub mono">{volumeVal.toLocaleString()} veh/h Total Volume</div>
+                </div>
+
+                <div className="rstat">
+                  <div className="lbl">Traffic flow</div>
+                  <div className="val">{loc.trafficFlow || 'Normal'}</div>
+                </div>
+
+                <div className="rstat">
+                  <div className="lbl">{isActive ? 'Elapsed' : 'Next run'}</div>
+                  <div className="val">
+                    {isActive ? fmtElapsed(loc.elapsedSeconds || 0) : (loc.nextRun || '—')}
+                  </div>
                 </div>
               </div>
 
-              {/* 3. Animated Highway Schematic Glyph & Equipment Chips */}
-              <div className="card-col-visual">
-                <div className="mini-highway-track-wrap">
-                  <svg className="mini-highway-svg" viewBox="0 0 180 20" preserveAspectRatio="none">
-                    <line className="highway-bed" x1="4" y1="10" x2="176" y2="10" />
-                    <line className={`highway-flow ${isActive ? 'flowing' : ''}`} x1="4" y1="10" x2="176" y2="10" />
-                    {[20, 55, 90, 125, 160].map(x => (
-                      <circle
-                        key={x}
-                        className={`highway-dot ${isActive ? 'on' : isPending ? 'pending' : ''}`}
-                        cx={x}
-                        cy="10"
-                        r="2.5"
-                      />
-                    ))}
-                  </svg>
-                </div>
-
-                <div className="equipment-chips-deck">
-                  <span className="eq-mini-chip" title="CCTV Cameras">📹 {cctv[0]}/{cctv[1]}</span>
-                  <span className="eq-mini-chip" title="AVDS Detectors">📡 {avds[0]}/{avds[1]}</span>
-                  <span className="eq-mini-chip" title="Lane Control Signs">🚥 {lcs[0]}/{lcs[1]}</span>
-                  <span className="eq-mini-chip" title="Variable Message Signs">📺 {vms[0]}/{vms[1]}</span>
+              {/* Status Pill Column */}
+              <div className="loc-row-status">
+                <div className={`status-pill ${loc.status}`}>
+                  <span className="dot"></span>
+                  {isActive
+                    ? `ACTIVE - P${loc.phase || 2}`
+                    : isPending
+                    ? 'ATTENTION'
+                    : 'INACTIVE'}
                 </div>
               </div>
 
-              {/* 4. Operations Timer / Next Run Schedule */}
-              <div className="card-col-schedule">
-                <div className="schedule-lbl">{isActive ? 'OPERATION ELAPSED' : 'NEXT SCHEDULED RUN'}</div>
-                <div className={`schedule-val mono ${isActive ? 'timer-green' : ''}`}>
-                  {isActive ? `⏱️ ${fmtElapsed(loc.elapsedSeconds || 0)}` : (loc.nextRun || 'Awaiting Schedule')}
+              {/* Action Column */}
+              <div className="loc-row-action">
+                <div className={`alarm-badge ${alarmCount === 0 ? 'none' : ''}`}>
+                  <b>{alarmCount}</b> {alarmCount === 1 ? 'alarm' : 'alarms'}
                 </div>
-                <div className="schedule-rule">Peak-Hour Autonomous Engine</div>
-              </div>
-
-              {/* 5. Alarms & Launch Action */}
-              <div className="card-col-actions">
-                <div className={`alarm-indicator-badge ${alarmCount > 0 ? 'has-alarm' : 'clean'}`}>
-                  {alarmCount > 0 ? (
-                    <>
-                      <span className="alarm-dot-pulse"></span>
-                      <b>{alarmCount}</b> {alarmCount === 1 ? 'Open Alarm' : 'Open Alarms'}
-                    </>
-                  ) : (
-                    <>
-                      <span className="clean-check">✓</span> 0 Alarms
-                    </>
-                  )}
-                </div>
-
                 <button
-                  className="card-launch-dashboard-btn"
+                  className="open-btn"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleOpenCorridor(loc.id);
@@ -234,12 +181,11 @@ export default function OverviewScreen({
                   Open Dashboard →
                 </button>
               </div>
-
             </div>
           );
         })}
       </div>
-
+    </div>
     </div>
   );
 }
