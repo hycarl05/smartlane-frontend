@@ -8,9 +8,28 @@ export default function CctvModal({
   onShowToast
 }) {
   const [isStreaming, setIsStreaming] = useState(true);
-  const [activeTab, setActiveTab] = useState('stream'); // 'stream' | 'audit' | 'policy'
+  const [activeTab, setActiveTab] = useState('stream'); // 'stream' | 'policy' | 'audit'
+  const [currentTime, setCurrentTime] = useState('');
+  const [isFlashing, setIsFlashing] = useState(false);
 
   const isOk = cctv ? cctv.status === 'ok' : false;
+
+  // Real-time CCTV timestamp ticker
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const yr = now.getFullYear();
+      const mo = String(now.getMonth() + 1).padStart(2, '0');
+      const da = String(now.getDate()).padStart(2, '0');
+      const hr = String(now.getHours()).padStart(2, '0');
+      const mi = String(now.getMinutes()).padStart(2, '0');
+      const se = String(now.getSeconds()).padStart(2, '0');
+      setCurrentTime(`${yr}-${mo}-${da} ${hr}:${mi}:${se}`);
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (onLogAudit && cctv) {
@@ -44,6 +63,23 @@ export default function CctvModal({
     }
   };
 
+  const handleCaptureSnapshot = () => {
+    setIsFlashing(true);
+    setTimeout(() => setIsFlashing(false), 250);
+    if (onShowToast) {
+      onShowToast(`📷 Snapshot captured & archived for ${cctv.km}`);
+    }
+    if (onLogAudit) {
+      onLogAudit('info', `Operator captured security snapshot from camera ${cctv.km}`);
+    }
+  };
+
+  const handleSyncPtz = () => {
+    if (onShowToast) {
+      onShowToast(`🎯 PTZ optical angle calibrated for ${cctv.km}`);
+    }
+  };
+
   const handleReportFault = () => {
     if (onLogAudit) {
       onLogAudit(
@@ -52,162 +88,233 @@ export default function CctvModal({
       );
     }
     if (onShowToast) {
-      onShowToast(`Maintenance ticket logged for ${cctv.km}`);
+      onShowToast(`🚨 Maintenance dispatch logged for camera ${cctv.km}`);
     }
   };
 
   return (
-    <div className="vms-editor-backdrop" onClick={onClose}>
-      <div className="vms-editor-modal cctv-modal-wrap" onClick={(e) => e.stopPropagation()}>
-        {/* MODAL HEADER */}
-        <div className="vms-editor-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+    <div className="cctv-modal-overlay" onClick={onClose}>
+      <div className="cctv-modal-card" onClick={(e) => e.stopPropagation()}>
+        {/* ── 1. MODAL HEADER ── */}
+        <div className="cctv-modal-header">
+          <div className="cctv-header-left">
             <span className={`cctv-status-badge ${isOk ? 'ok' : 'fault'}`}>
-              {isOk ? '● LIVE ONLINE' : '⚠️ HARDWARE FAULT'}
+              <span className="dot"></span>
+              {isOk ? 'LIVE ONLINE' : 'HARDWARE FAULT'}
             </span>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>
-              CCTV Camera Inspection — {cctv.km}
-            </h3>
-            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
-              ({locName})
-            </span>
+            <div className="cctv-header-title-group">
+              <h3 className="cctv-header-title">
+                CCTV Camera Inspection — {cctv.km}
+              </h3>
+              <div className="cctv-header-subtitle">
+                {locName || 'PLUS SmartLane Corridor'} · High-Definition PTZ Optics
+              </div>
+            </div>
           </div>
-          <button className="vms-editor-close" onClick={onClose}>✕</button>
+          <button className="cctv-modal-close-btn" onClick={onClose} title="Close Inspection">
+            ✕
+          </button>
         </div>
 
-        {/* ALWAYS-ON CONTINUOUS RECORDING MANDATE BANNER */}
+        {/* ── 2. POLICY & COMPLIANCE BANNER ── */}
         <div className="cctv-policy-banner">
           <div className="policy-badge">
-            <span className="rec-pulse">🔴</span>
-            <span><b>CONTINUOUS 24/7 RECORDING:</b> Mandatory 30-Day Security & Incident Archive Active</span>
+            <span className="rec-dot"></span>
+            <span><b>CONTINUOUS 24/7 RECORDING:</b> Mandatory 30-Day Incident Archive Active</span>
           </div>
           <div className="policy-note">
-            Highways Safety Standard: Camera power cannot be turned off by administrators. Live streams are toggled on-demand by authorized operators. All actions are securely logged.
+            Highways Safety Standard · Read-only Audit Active
           </div>
         </div>
 
-        {/* MODAL TABS */}
+        {/* ── 3. TABS ── */}
         <div className="cctv-modal-tabs">
           <button
-            className={`tab-btn ${activeTab === 'stream' ? 'active' : ''}`}
+            className={`cctv-tab-btn ${activeTab === 'stream' ? 'active' : ''}`}
             onClick={() => setActiveTab('stream')}
           >
             📹 Operator Live View
           </button>
           <button
-            className={`tab-btn ${activeTab === 'policy' ? 'active' : ''}`}
+            className={`cctv-tab-btn ${activeTab === 'policy' ? 'active' : ''}`}
             onClick={() => setActiveTab('policy')}
           >
             🛡️ Security & Archive Policy
           </button>
           <button
-            className={`tab-btn ${activeTab === 'audit' ? 'active' : ''}`}
+            className={`cctv-tab-btn ${activeTab === 'audit' ? 'active' : ''}`}
             onClick={() => setActiveTab('audit')}
           >
             📜 Audit & Compliance Log
           </button>
         </div>
 
-        {/* MODAL BODY */}
-        <div className="vms-editor-body" style={{ padding: '16px' }}>
+        {/* ── 4. MODAL BODY ── */}
+        <div className="cctv-modal-body">
           {activeTab === 'stream' && (
             <div className="cctv-stream-container">
               {isOk ? (
                 <div className="cctv-viewport">
                   {isStreaming ? (
                     <div className="cctv-feed-screen">
-                      {/* SIMULATED HIGHWAY VIDEO ANIMATION */}
-                      <svg className="cctv-road-svg" viewBox="0 0 400 220">
+                      {isFlashing && <div className="cctv-flash-overlay"></div>}
+
+                      {/* HIGHWAY SIMULATION SVG */}
+                      <svg className="cctv-road-svg" viewBox="0 0 600 320" preserveAspectRatio="none">
                         <defs>
                           <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#0f172a" />
-                            <stop offset="100%" stopColor="#1e293b" />
+                            <stop offset="0%" stopColor="#0B132B" />
+                            <stop offset="60%" stopColor="#1C2541" />
+                            <stop offset="100%" stopColor="#2E3A59" />
                           </linearGradient>
                           <linearGradient id="roadGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#1e293b" />
-                            <stop offset="100%" stopColor="#090d16" />
+                            <stop offset="0%" stopColor="#273449" />
+                            <stop offset="100%" stopColor="#111827" />
+                          </linearGradient>
+                          <linearGradient id="shoulderGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#064E3B" stopOpacity="0.4" />
+                            <stop offset="100%" stopColor="#047857" stopOpacity="0.65" />
                           </linearGradient>
                         </defs>
-                        {/* Background / Road Layout */}
-                        <rect width="400" height="220" fill="url(#skyGrad)" />
-                        <polygon points="120,80 280,80 390,220 10,220" fill="url(#roadGrad)" />
-                        
-                        {/* SmartLane Shoulder Lane */}
-                        <polygon points="120,80 155,80 90,220 10,220" fill="#152e24" opacity="0.7" />
-                        <line x1="155" y1="80" x2="90" y2="220" stroke="#22c55e" strokeWidth="2" strokeDasharray="4,4" />
-                        
-                        {/* Main Lane Markings */}
-                        <line x1="200" y1="80" x2="190" y2="220" stroke="#fbbf24" strokeWidth="2" strokeDasharray="8,8" />
-                        <line x1="245" y1="80" x2="290" y2="220" stroke="#ffffff" strokeWidth="2" strokeDasharray="6,6" opacity="0.6" />
 
-                        {/* Animated Vehicles */}
-                        <g className="anim-car-1">
-                          <rect x="135" y="110" width="22" height="14" rx="3" fill="#38bdf8" />
-                          <circle cx="138" cy="124" r="2" fill="#000" />
-                          <circle cx="154" cy="124" r="2" fill="#000" />
+                        {/* Sky & Distant Landscape */}
+                        <rect width="600" height="320" fill="url(#skyGrad)" />
+                        <path d="M0,110 Q150,95 300,105 T600,100 L600,120 L0,120 Z" fill="#1E293B" opacity="0.6" />
+                        <line x1="0" y1="110" x2="600" y2="110" stroke="#334155" strokeWidth="1" />
+
+                        {/* Main Road Surface */}
+                        <polygon points="220,110 380,110 590,320 10,320" fill="url(#roadGrad)" />
+
+                        {/* SmartLane Shoulder (Left Emergency Lane) */}
+                        <polygon points="220,110 255,110 140,320 10,320" fill="url(#shoulderGrad)" />
+                        <line x1="255" y1="110" x2="140" y2="320" stroke="#10B981" strokeWidth="2.5" strokeDasharray="5,6" />
+
+                        {/* Road Lane Markings */}
+                        <line x1="300" y1="110" x2="290" y2="320" stroke="#FBBF24" strokeWidth="2.5" strokeDasharray="8,10" />
+                        <line x1="340" y1="110" x2="440" y2="320" stroke="#FFFFFF" strokeWidth="2" strokeDasharray="8,8" opacity="0.75" />
+                        <line x1="220" y1="110" x2="10" y2="320" stroke="#FFFFFF" strokeWidth="3" opacity="0.9" />
+                        <line x1="380" y1="110" x2="590" y2="320" stroke="#FFFFFF" strokeWidth="3" opacity="0.9" />
+
+                        {/* Overhead Gantry Structure Silhouette */}
+                        <line x1="170" y1="112" x2="170" y2="70" stroke="#475569" strokeWidth="3" />
+                        <line x1="430" y1="112" x2="430" y2="70" stroke="#475569" strokeWidth="3" />
+                        <rect x="160" y="66" width="280" height="8" rx="2" fill="#334155" />
+                        <rect x="225" y="58" width="22" height="14" rx="2" fill="#0D9488" />
+                        <text x="236" y="68" fill="#FFF" fontSize="8" fontWeight="bold" textAnchor="middle">↑</text>
+                        <rect x="290" y="58" width="22" height="14" rx="2" fill="#0D9488" />
+                        <text x="301" y="68" fill="#FFF" fontSize="8" fontWeight="bold" textAnchor="middle">↑</text>
+                        <rect x="355" y="58" width="22" height="14" rx="2" fill="#0D9488" />
+                        <text x="366" y="68" fill="#FFF" fontSize="8" fontWeight="bold" textAnchor="middle">↑</text>
+
+                        {/* Realistic Animated Moving Vehicles */}
+                        <g className="anim-car-smartlane">
+                          <rect x="68" y="220" width="38" height="24" rx="5" fill="#0EA5E9" />
+                          <rect x="74" y="224" width="26" height="12" rx="3" fill="#082F49" opacity="0.8" />
+                          <circle cx="76" cy="244" r="3" fill="#000" />
+                          <circle cx="98" cy="244" r="3" fill="#000" />
+                          <circle cx="70" cy="226" r="2.5" fill="#FDE047" />
+                          <circle cx="70" cy="238" r="2.5" fill="#FDE047" />
                         </g>
-                        <g className="anim-car-2">
-                          <rect x="210" y="140" width="32" height="18" rx="4" fill="#f43f5e" />
-                          <circle cx="215" cy="158" r="3" fill="#000" />
-                          <circle cx="237" cy="158" r="3" fill="#000" />
+
+                        <g className="anim-car-center">
+                          <rect x="330" y="195" width="44" height="28" rx="6" fill="#EF4444" />
+                          <rect x="338" y="200" width="28" height="14" rx="3" fill="#450A0A" opacity="0.8" />
+                          <circle cx="340" cy="223" r="3.5" fill="#000" />
+                          <circle cx="366" cy="223" r="3.5" fill="#000" />
+                          <circle cx="332" cy="201" r="3" fill="#FEF08A" />
+                          <circle cx="332" cy="217" r="3" fill="#FEF08A" />
                         </g>
-                        <g className="anim-car-3">
-                          <rect x="60" y="160" width="28" height="16" rx="3" fill="#4ade80" />
-                          <circle cx="65" cy="176" r="3" fill="#000" />
-                          <circle cx="83" cy="176" r="3" fill="#000" />
+
+                        <g className="anim-car-fast">
+                          <rect x="470" y="240" width="48" height="28" rx="6" fill="#10B981" />
+                          <rect x="478" y="245" width="32" height="14" rx="3" fill="#064E3B" opacity="0.8" />
+                          <circle cx="482" cy="268" r="3.5" fill="#000" />
+                          <circle cx="508" cy="268" r="3.5" fill="#000" />
+                          <circle cx="472" cy="246" r="3" fill="#FEF08A" />
+                          <circle cx="472" cy="262" r="3" fill="#FEF08A" />
                         </g>
                       </svg>
 
-                      {/* FEED OVERLAY METRICS */}
-                      <div className="cctv-overlay-top">
-                        <div className="cctv-live-tag">● LIVE STREAM</div>
-                        <div className="cctv-cam-id">{cctv.km} — SMARTLANE CAM-04</div>
-                        <div className="cctv-archive-tag">REC 24/7 FULL HD</div>
+                      {/* CCTV HUD: TOP BAR */}
+                      <div className="cctv-hud-top">
+                        <div className="cctv-hud-left">
+                          <span className="cctv-live-tag">
+                            <span className="rec-dot-white"></span> LIVE STREAM
+                          </span>
+                          <span className="cctv-cam-id">
+                            {cctv.km} · CAM-04
+                          </span>
+                        </div>
+                        <div className="cctv-hud-right">
+                          <span className="cctv-timestamp-tag">
+                            {currentTime || '2026-08-22 09:52:00'}
+                          </span>
+                          <span className="cctv-archive-tag">
+                            REC 24/7 1080P
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="cctv-overlay-bottom">
-                        <div>LATENCY: 18ms | 1080p @ 30 FPS</div>
-                        <div>ENC: H.265 | IP: 10.180.4.15</div>
+                      {/* CCTV HUD: OPTICAL CROSSHAIR */}
+                      <div className="cctv-hud-center">
+                        <div className="cctv-crosshair"></div>
+                      </div>
+
+                      {/* CCTV HUD: BOTTOM BAR */}
+                      <div className="cctv-hud-bottom">
+                        <div>LATENCY: 14ms · 1080p @ 30 FPS · 4.8 Mbps</div>
+                        <div>ENC: H.265 · IP: 10.180.4.15 · PTZ: 042°/-12°</div>
                       </div>
                     </div>
                   ) : (
                     <div className="cctv-paused-screen">
-                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>⏸</div>
-                      <div><b>User Stream Paused</b></div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '4px' }}>
-                        Live dashboard stream closed by user request. (Continuous background recording remains active).
+                      <div className="pause-icon">⏸</div>
+                      <div className="pause-title">Dashboard Stream Paused</div>
+                      <div className="pause-sub">
+                        Live preview closed by operator. Background 24/7 incident archive continues uninterrupted.
                       </div>
-                      <button className="primary-toggle to-activate" style={{ marginTop: '12px', width: 'auto', padding: '6px 16px' }} onClick={handleToggleStream}>
+                      <button className="cctv-ctrl-btn active-resume" onClick={handleToggleStream}>
                         ▶ Resume Live View Stream
                       </button>
                     </div>
                   )}
 
-                  {/* STREAM CONTROL BAR */}
+                  {/* STREAM CONTROLS BAR */}
                   <div className="cctv-controls-bar">
-                    <button className="mini-btn good-btn" onClick={handleToggleStream}>
-                      {isStreaming ? '⏸ Pause Live View' : '▶ Start Live View'}
+                    <button
+                      className={`cctv-ctrl-btn ${isStreaming ? 'active-pause' : 'active-resume'}`}
+                      onClick={handleToggleStream}
+                    >
+                      {isStreaming ? '⏸ Pause Live View' : '▶ Resume Live View'}
                     </button>
-                    <button className="mini-btn neutral-btn" onClick={() => onShowToast && onShowToast('Snapshot saved to security audit folder')}>
+                    <button
+                      className="cctv-ctrl-btn"
+                      onClick={handleCaptureSnapshot}
+                      title="Save timestamped frame to archive"
+                    >
                       📷 Capture Snapshot
                     </button>
-                    <button className="mini-btn neutral-btn" onClick={() => onShowToast && onShowToast('PTZ auto-preset synchronized')}>
-                      🎯 Sync PTZ Angle
+                    <button
+                      className="cctv-ctrl-btn"
+                      onClick={handleSyncPtz}
+                      title="Calibrate optical framing to SmartLane corridor"
+                    >
+                      🎯 Align PTZ Angle
                     </button>
-                    <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-faint)' }}>
-                      Archive Retention: 30 Days
-                    </span>
+                    <div className="cctv-retention-pill">
+                      <span>📁 30-Day Retention Secured</span>
+                    </div>
                   </div>
                 </div>
               ) : (
                 /* PHYSICAL HARDWARE FAULT DIAGNOSTIC SCREEN */
                 <div className="cctv-fault-screen">
                   <div className="fault-header-banner">
-                    <span className="icon">⚠️</span>
+                    <span className="fault-icon">⚠️</span>
                     <div>
-                      <div className="title">PHYSICAL HARDWARE FAULT / SIGNAL LOSS DETECTED</div>
-                      <div className="sub">
-                        Camera unit on gantry {cctv.km} failed to respond to network ping. Continuous recording hardware has lost connection.
+                      <div className="fault-title">PHYSICAL HARDWARE FAULT / SIGNAL LOSS</div>
+                      <div className="fault-sub">
+                        Camera unit on gantry {cctv.km} failed to respond to network ping. Physical link down.
                       </div>
                     </div>
                   </div>
@@ -218,22 +325,22 @@ export default function CctvModal({
                       <span className="val bad">ERR_CAM_PHYSICAL_DISCONNECT (0x504)</span>
                     </div>
                     <div className="fault-row">
-                      <span className="lbl">Admin Power Control:</span>
-                      <span className="val">DISABLED (Always-On Recording Mandate)</span>
+                      <span className="lbl">Power Administration:</span>
+                      <span className="val">HARDWARE LOCKED (Always-On Mandate)</span>
                     </div>
                     <div className="fault-row">
-                      <span className="lbl">Root Cause Analysis:</span>
-                      <span className="val">Physical cable disconnection or local power outage at KM {cctv.km}</span>
+                      <span className="lbl">Diagnosed Root Cause:</span>
+                      <span className="val">Gantry cable severed or localized power outage at KM {cctv.km}</span>
                     </div>
                     <div className="fault-row">
-                      <span className="lbl">Last Known Ping:</span>
-                      <span className="val mono">Today at 13:58:41 (Signal Timeout)</span>
+                      <span className="lbl">Last Known Signal:</span>
+                      <span className="val mono">{currentTime || 'Today at 09:48:12'}</span>
                     </div>
                   </div>
 
                   <div className="fault-actions">
-                    <button className="primary-toggle to-deactivate" onClick={handleReportFault}>
-                      🚨 Dispatch Field Technician & Log Maintenance Audit
+                    <button className="cctv-dispatch-btn" onClick={handleReportFault}>
+                      🚨 Dispatch Field Technician & Log Maintenance Ticket
                     </button>
                   </div>
                 </div>
@@ -244,17 +351,29 @@ export default function CctvModal({
           {activeTab === 'policy' && (
             <div className="cctv-policy-details">
               <h4>Highway CCTV Continuous Recording Protocol</h4>
-              <ul>
-                <li>
-                  <b>Continuous, Always-On Recording:</b> Security and incident auditing are paramount on major highways. Cameras cannot be turned "off" by administrators and operate continuously to maintain the mandatory 30-day safety archive.
-                </li>
-                <li>
-                  <b>User-Driven Dashboard Streams:</b> Live video feeds do not randomly force-display automatically during normal operations. Authorized operators can toggle and view live streams at any time via map icons or schematics.
-                </li>
-                <li>
-                  <b>Automatic Logging:</b> To prevent unauthorized access or tampering, all camera stream viewing, live status changes, and physical faults are automatically recorded as read-only entries in the system's secure audit log.
-                </li>
-              </ul>
+              <div className="policy-cards-grid">
+                <div className="policy-card">
+                  <div className="picon">🔒</div>
+                  <div className="ptitle">Always-On Continuous Recording</div>
+                  <div className="pdesc">
+                    Safety and incident forensics require uninterrupted archival on all PLUS highway corridors. Camera power cannot be toggled off by administrators.
+                  </div>
+                </div>
+                <div className="policy-card">
+                  <div className="picon">👁️</div>
+                  <div className="ptitle">Operator On-Demand Live View</div>
+                  <div className="pdesc">
+                    Live streams are opened on-demand by authorized operators for traffic management, incident verification, and SmartLane lane clearance inspection.
+                  </div>
+                </div>
+                <div className="policy-card">
+                  <div className="picon">🛡️</div>
+                  <div className="ptitle">Automated Audit & Compliance</div>
+                  <div className="pdesc">
+                    All operator feed accesses, PTZ adjustments, and physical connectivity dropouts are permanently logged into the immutable audit database.
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -262,26 +381,26 @@ export default function CctvModal({
             <div className="cctv-audit-panel">
               <h4>Camera Audit Log Entries ({cctv.km})</h4>
               <div className="cctv-audit-list">
-                <div className="audit-entry">
-                  <span className="time">14:15:02</span>
-                  <span className="type info">STREAM_ACCESS</span>
-                  <span className="desc">User admin initiated live stream preview for {cctv.km}</span>
+                <div className="cctv-audit-row">
+                  <span className="atime">{currentTime.split(' ')[1] || '09:50:00'}</span>
+                  <span className="atype info">STREAM_ACCESS</span>
+                  <span className="adesc">User admin initiated live stream preview for {cctv.km}</span>
                 </div>
-                <div className="audit-entry">
-                  <span className="time">13:58:41</span>
-                  <span className={`type ${isOk ? 'info' : 'critical'}`}>
+                <div className="cctv-audit-row">
+                  <span className="atime">09:30:12</span>
+                  <span className={`atype ${isOk ? 'good' : 'bad'}`}>
                     {isOk ? 'HEALTH_CHECK' : 'HARDWARE_FAULT'}
                   </span>
-                  <span className="desc">
+                  <span className="adesc">
                     {isOk
-                      ? `Camera ${cctv.km} health check PASSED — 24/7 continuous stream OK`
-                      : `Camera ${cctv.km} physical connection dropped — Hardware fault alert logged`}
+                      ? `Camera ${cctv.km} diagnostic check PASSED — 24/7 stream OK`
+                      : `Camera ${cctv.km} signal loss detected — Hardware fault logged`}
                   </span>
                 </div>
-                <div className="audit-entry">
-                  <span className="time">08:00:00</span>
-                  <span className="type info">SYSTEM_BOOT</span>
-                  <span className="desc">Continuous 30-day safety archive initialized for {cctv.km}</span>
+                <div className="cctv-audit-row">
+                  <span className="atime">08:00:00</span>
+                  <span className="atype info">SYSTEM_BOOT</span>
+                  <span className="adesc">Continuous 30-day safety archive initialized for {cctv.km}</span>
                 </div>
               </div>
             </div>
