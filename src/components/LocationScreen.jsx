@@ -71,17 +71,20 @@ export default function LocationScreen({
   };
 
   const handleDismissPrompt = () => {
+    const updatedLCS = (loc.lcs || []).map(item => ({ ...item, open: false }));
     onUpdateLoc(loc.id, {
       status: 'inactive',
       phase: 0,
-      phaseLabel: 'Standby'
+      phaseLabel: 'Standby Mode',
+      lcs: updatedLCS
     });
     addLogEntry('operation', `Dismissed activation recommendation for ${loc.name}`);
-    onShowToast('Activation recommendation dismissed');
+    onShowToast('Activation recommendation dismissed — LCS Red X ✕, VMS Closed');
   };
 
   const handleStartPhase1 = () => {
-    // Phase 1: Pre-Activation (Initiates 3-min pre-activation cycle)
+    // Phase 1: Pre-Activation (3-min warning cycle)
+    const updatedLCS = (loc.lcs || []).map(item => ({ ...item, open: false }));
     onUpdateLoc(loc.id, {
       status: 'active',
       phase: 1,
@@ -90,18 +93,19 @@ export default function LocationScreen({
       elapsedSeconds: 0,
       ps: time,
       pe: 'Scheduled',
+      lcs: updatedLCS,
       timestamps: {
         ...(loc.timestamps || {}),
         p1PreActivation: time
       }
     });
-    addLogEntry('operation', `Initiated Phase 1: Pre-Activation cycle (3 min warning) for ${loc.name}`);
-    onShowToast(`Phase 1 Pre-Activation started (3 min countdown)`);
+    addLogEntry('operation', `Initiated Phase 1 Pre-Activation (3 min warning) for ${loc.name}`);
+    onShowToast(`Phase 1 Pre-Activation: VMS broadcast "PERHATIAN: BERSEDIA SMARTLANE AKAN DIBUKA"`);
   };
 
   const handleStartPhase2Now = () => {
-    // Skip directly to Phase 2: Active Operation
-    const updatedLCS = loc.lcs.map(item => ({ ...item, open: true }));
+    // Phase 2: Active Operation (Open Smartlane & LCS Green Arrow)
+    const updatedLCS = (loc.lcs || []).map(item => ({ ...item, open: true }));
     onUpdateLoc(loc.id, {
       status: 'active',
       phase: 2,
@@ -113,12 +117,12 @@ export default function LocationScreen({
         p2Activation: time
       }
     });
-    addLogEntry('operation', `Phase 2 Active Operation confirmed — Emergency Lane OPEN on ${loc.name}`);
-    onShowToast(`Phase 2 Active: Emergency Lane OPEN`);
+    addLogEntry('operation', `Phase 2 Active Operation confirmed — LCS Green Arrow ↓ OPEN on ${loc.name}`);
+    onShowToast(`Phase 2 Active: LCS ON Green ↓, VMS broadcast "SMARTLANE BERMULA"`);
   };
 
   const handleStartPhase3Deactivation = () => {
-    // Phase 3: Pre-Deactivation (Initiates 3-min pre-deactivation cycle)
+    // Phase 3: Pre-Deactivation (3-min closure warning cycle)
     onUpdateLoc(loc.id, {
       status: 'active',
       phase: 3,
@@ -129,13 +133,13 @@ export default function LocationScreen({
         p3PreDeactivation: time
       }
     });
-    addLogEntry('operation', `Initiated Phase 3: Pre-Deactivation cycle (3 min warning) for ${loc.name}`);
-    onShowToast(`Phase 3 Pre-Deactivation started (3 min countdown)`);
+    addLogEntry('operation', `Initiated Phase 3 Pre-Deactivation cycle (3 min warning) for ${loc.name}`);
+    onShowToast(`Phase 3 Pre-Deactivation: VMS broadcast "SMARTLANE AKAN DITUTUP"`);
   };
 
   const handleDeactivatePhase4And5 = () => {
-    // Phase 4: Deactivation (Revert LCS to Red X) -> Phase 5 (Post-Activation)
-    const updatedLCS = loc.lcs.map(item => ({ ...item, open: false }));
+    // Phase 4: Deactivation (Revert LCS to Red X) -> Phase 5 (Post-Activation Report)
+    const updatedLCS = (loc.lcs || []).map(item => ({ ...item, open: false }));
     onUpdateLoc(loc.id, {
       status: 'inactive',
       phase: 4,
@@ -147,16 +151,18 @@ export default function LocationScreen({
         p4Deactivation: time
       }
     });
-    addLogEntry('operation', `Phase 4 Deactivation: Smartlane CLOSED on ${loc.name}`);
-    onShowToast(`Phase 4 Deactivated: Smartlane CLOSED`);
+    addLogEntry('operation', `Phase 4 Deactivation: Smartlane CLOSED & LCS Red X ✕ on ${loc.name}`);
+    onShowToast(`Phase 4 Deactivated: LCS Red X ✕, VMS broadcast "SMARTLANE DITUTUP"`);
   };
 
   const handleStartPhase5Report = () => {
+    const updatedLCS = (loc.lcs || []).map(item => ({ ...item, open: false }));
     onUpdateLoc(loc.id, {
       status: 'inactive',
       phase: 5,
       phaseLabel: 'Phase 5: Post-Activation & Reporting',
       phaseTimer: 0,
+      lcs: updatedLCS,
       timestamps: {
         ...(loc.timestamps || {}),
         p5PostDeactivation: time
@@ -165,6 +171,21 @@ export default function LocationScreen({
     addLogEntry('operation', `Entered Phase 5: Post-Activation Report for ${loc.name}`);
     onShowToast(`Phase 5: Operational Report Ready`);
     setShowPhaseReportModal(true);
+  };
+
+  const handleResetToStandby = () => {
+    const updatedLCS = (loc.lcs || []).map(item => ({ ...item, open: false }));
+    onUpdateLoc(loc.id, {
+      status: 'inactive',
+      phase: 0,
+      phaseLabel: 'Standby Mode',
+      elapsedSeconds: 0,
+      phaseTimer: 0,
+      lcs: updatedLCS
+    });
+    setShowPhaseReportModal(false);
+    addLogEntry('operation', `Reset system back to Standby (Phase 0) for ${loc.name}`);
+    onShowToast('System reset to Standby mode — Ready for next activation');
   };
 
   const handlePauseReason = (reason) => {
@@ -297,19 +318,19 @@ export default function LocationScreen({
               className={`tab-btn ${activeTab === 'designer' ? 'active' : ''}`}
               onClick={() => setActiveTab('designer')}
             >
-              🎨 Road Studio
+              Road Studio
             </button>
             <button
               className={`tab-btn ${activeTab === 'vms' ? 'active' : ''}`}
               onClick={() => setActiveTab('vms')}
             >
-              📺 VMS Editor
+              VMS Editor
             </button>
             <button
               className={`tab-btn ${activeTab === 'map' ? 'active' : ''}`}
               onClick={() => setActiveTab('map')}
             >
-              🗺️ GIS Map
+              GIS Map
             </button>
           </div>
         </>
@@ -339,13 +360,19 @@ export default function LocationScreen({
                 <div className="hero-status">
                   <div className="big-dot"></div>
                   <div className="hero-status-text">
-                    {loc.status === 'active' ? 'SMART LANE ACTIVE' : loc.status === 'pending' ? 'PENDING DECISION' : 'SMART LANE INACTIVE'}
+                    {loc.phase === 1 ? 'PRE-ACTIVATION WARNING' :
+                      loc.phase === 2 ? 'SMART LANE ACTIVE' :
+                        loc.phase === 3 ? 'PRE-DEACTIVATION WARNING' :
+                          loc.phase === 4 ? 'SMART LANE CLOSED' :
+                            loc.phase === 5 ? 'POST-ACTIVATION REPORT' :
+                              loc.status === 'pending' ? 'PENDING DECISION' : 'SMART LANE INACTIVE'}
                     <small>
-                      {loc.status === 'active'
-                        ? `Phase ${loc.phase || 2} of 5 · ${loc.phaseLabel || 'Activation'}`
-                        : loc.status === 'pending'
-                        ? loc.phaseLabel
-                        : `Mode: ${(loc.mode || 'scheduled').charAt(0).toUpperCase() + (loc.mode || 'scheduled').slice(1)}`}
+                      {loc.phase === 1 ? 'Pre-Activation Warning Cycle' :
+                        loc.phase === 2 ? 'Emergency Lane OPEN — LCS Green ↓' :
+                          loc.phase === 3 ? 'Pre-Deactivation Closure Warning' :
+                            loc.phase === 4 ? 'Deactivated — LCS Red X ✕' :
+                              loc.phase === 5 ? 'Post-Activation Summary' :
+                                `Mode: ${(loc.mode || 'scheduled').charAt(0).toUpperCase() + (loc.mode || 'scheduled').slice(1)}`}
                     </small>
                   </div>
                 </div>
@@ -370,14 +397,34 @@ export default function LocationScreen({
                 </div>
               </div>
 
-              <div className="hero-controls">
-                {isActive ? (
+              <div className="hero-controls" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {(loc.phase === 0 || !loc.phase) && (
+                  <button className="primary-toggle to-activate" onClick={handleStartPhase1}>
+                    Activate Smart Lane
+                  </button>
+                )}
+
+                {loc.phase === 1 && (
+                  <button className="primary-toggle to-activate" onClick={handleStartPhase2Now}>
+                    Open Emergency Lane
+                  </button>
+                )}
+
+                {loc.phase === 2 && (
                   <button className="primary-toggle to-deactivate" onClick={handleStartPhase3Deactivation}>
                     Deactivate Smart Lane
                   </button>
-                ) : (
-                  <button className="primary-toggle to-activate" onClick={handleStartPhase1}>
-                    Activate Smart Lane
+                )}
+
+                {loc.phase === 3 && (
+                  <button className="primary-toggle to-deactivate" onClick={handleDeactivatePhase4And5}>
+                    Confirm Close Lane
+                  </button>
+                )}
+
+                {(loc.phase === 4 || loc.phase === 5) && (
+                  <button className="primary-toggle to-activate" onClick={handleStartPhase5Report}>
+                    View Operation Report
                   </button>
                 )}
 
@@ -533,19 +580,57 @@ export default function LocationScreen({
 
               {/* RIGHT: Stack of VMS Messages, System Status, & Audit Log */}
               <div className="side-stack">
-                {/* 1. Mini VMS Messages */}
+                {/* 1. VMS & MINI VMS MESSAGES */}
                 <div className="vms-card">
-                  <div className="card-title">Mini VMS Messages</div>
-                  <div>
-                    {(loc.vmsBoards || [
-                      { km: 'KM4.91NB', msg: 'HATI-HATI KETIKA MEMANDU' },
-                      { km: 'KM6.0NB', msg: 'JALUR KECEMASAN DIBUKA SEMENTARA' }
-                    ]).map((b, idx) => (
-                      <div key={idx} className="vms-msg-row">
-                        <span className="vms-msg">{b.msg}</span>
-                        <span className="vms-km">{b.km}</span>
-                      </div>
-                    ))}
+                  <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>VMS &amp; Mini VMS Messages</span>
+                    <button
+                      className="mini-edit-btn"
+                      onClick={() => handleOpenVmsEditor('vms')}
+                      title="Edit VMS Message Templates"
+                    >
+                      ✏️ Edit
+                    </button>
+                  </div>
+
+                  <div className="vms-sections-container">
+                    {/* Entry & Exit Main VMS */}
+                    <div className="vms-group-section">
+                      <div className="vms-group-title">📡 Entry &amp; Exit VMS</div>
+                      {(loc.vms || [
+                        { id: 'vms-entry', type: 'Entry VMS', km: 'KM3.5NB', position: 'Entry', msg: 'SMARTLANE BERMULA', msg2: 'MULA GUNAKAN LORONG KECEMASAN' },
+                        { id: 'vms-exit', type: 'Exit VMS', km: 'KM8.6NB', position: 'Exit', msg: 'SMARTLANE TAMAT', msg2: 'MASUK KEMBALI KE LORONG UTAMA' }
+                      ]).map((b, idx) => {
+                        const dynamicMsg = getDynamicVmsMessage(b, loc.phase || 0);
+                        const displayText = dynamicMsg.msg2 ? `${dynamicMsg.msg} — ${dynamicMsg.msg2}` : dynamicMsg.msg;
+                        return (
+                          <div key={idx} className="vms-msg-row main-vms-row" onClick={() => handleOpenVmsEditor('vms')} title="Click to edit Entry/Exit VMS">
+                            <span className="vms-type-tag">{b.type || (b.position === 'Entry' ? 'Entry VMS' : 'Exit VMS')}</span>
+                            <span className="vms-msg">{displayText}</span>
+                            <span className="vms-km">{b.km}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Mini VMS */}
+                    <div className="vms-group-section">
+                      <div className="vms-group-title">📱 Mini VMS</div>
+                      {(loc.miniVms || [
+                        { id: 'mvms-1', type: 'Mini VMS', km: 'KM4.91NB', position: 'Intermediate', msg: 'HATI-HATI', msg2: 'KETIKA MEMANDU' },
+                        { id: 'mvms-2', type: 'Mini VMS', km: 'KM6.0NB', position: 'Intermediate', msg: 'JALUR KECEMASAN', msg2: 'DIBUKA SEMENTARA' }
+                      ]).map((b, idx) => {
+                        const dynamicMsg = getDynamicVmsMessage(b, loc.phase || 0);
+                        const displayText = dynamicMsg.msg2 ? `${dynamicMsg.msg} — ${dynamicMsg.msg2}` : dynamicMsg.msg;
+                        return (
+                          <div key={idx} className="vms-msg-row mini-vms-row" onClick={() => handleOpenVmsEditor('miniVms')} title="Click to edit Mini VMS">
+                            <span className="vms-type-tag mini">Mini VMS</span>
+                            <span className="vms-msg">{displayText}</span>
+                            <span className="vms-km">{b.km}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
@@ -902,11 +987,11 @@ export default function LocationScreen({
             </div>
 
             <div className="modal-footer">
-              <button className="action-btn secondary" onClick={() => setShowPhaseReportModal(false)}>Close</button>
+              <button className="action-btn secondary" onClick={handleResetToStandby}>Close &amp; Reset to Standby</button>
               <button className="action-btn primary" onClick={() => {
                 onShowToast('Phase 5 Operational Report exported to PDF');
-                setShowPhaseReportModal(false);
-              }}>🖨️ Export PDF / Print</button>
+                handleResetToStandby();
+              }}>🖨️ Export PDF &amp; Reset</button>
             </div>
           </div>
         </div>

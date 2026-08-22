@@ -9302,4 +9302,85 @@ button {
   background: var(--flow) !important;
 }
 
+/* VMS & MINI VMS MESSAGES CARD STYLES */
+.vms-sections-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.vms-group-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vms-group-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-faint, #64748b);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.vms-msg-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: var(--surface-2, rgba(15, 23, 42, 0.6));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.vms-msg-row:hover {
+  background: var(--surface-hover, rgba(30, 41, 59, 0.8));
+}
+
+.vms-msg-row.main-vms-row {
+  border-left: 3px solid #0284c7;
+}
+
+.vms-msg-row.mini-vms-row {
+  border-left: 3px solid #f59e0b;
+}
+
+.vms-type-tag {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(2, 132, 199, 0.15);
+  color: #0284c7;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.vms-type-tag.mini {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+
+.vms-msg-row .vms-msg {
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--text, #1e293b);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vms-msg-row .vms-km {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-faint, #64748b);
+  flex-shrink: 0;
+}
+
 
