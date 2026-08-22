@@ -3657,21 +3657,22 @@ button {
   height: 100%;
   object-fit: cover;
   object-position: center;
-  transition: transform 12s ease;
+  opacity: 0.35;
+  transition: transform 12s ease, opacity 0.3s ease;
 }
 
 .split-login-container:hover .login-bg-img {
   transform: scale(1.04);
+  opacity: 0.42;
 }
 
 .login-image-overlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg,
-      rgba(10, 15, 28, 0.4) 0%,
-      rgba(10, 15, 28, 0.75) 50%,
-      rgba(10, 15, 28, 0.95) 100%),
-    linear-gradient(90deg, transparent 60%, var(--ink) 100%);
+      rgba(8, 13, 26, 0.2) 0%,
+      rgba(8, 13, 26, 0.6) 60%,
+      rgba(8, 13, 26, 0.9) 100%);
   z-index: 1;
 }
 
@@ -3687,12 +3688,12 @@ button {
   gap: 8px;
   padding: 6px 14px;
   border-radius: 20px;
-  background: rgba(47, 224, 196, 0.12);
-  border: 1px solid rgba(47, 224, 196, 0.3);
-  color: var(--accent);
+  background: rgba(13, 148, 136, 0.25);
+  border: 1px solid rgba(47, 224, 196, 0.45);
+  color: #2FE0C4;
   font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.05em;
   margin-bottom: 20px;
 }
@@ -3701,52 +3702,56 @@ button {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(47, 224, 196, 0.3);
+  background: #2FE0C4;
+  box-shadow: 0 0 0 3px rgba(47, 224, 196, 0.4);
   animation: pulse 1.8s infinite;
 }
 
 .hero-title {
   font-family: var(--font-display);
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 700;
   color: #FFFFFF;
-  line-height: 1.2;
+  line-height: 1.25;
   margin-bottom: 14px;
   letter-spacing: -0.01em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .hero-description {
   font-size: 14px;
-  color: var(--text-dim);
+  color: rgba(226, 232, 240, 0.92);
   line-height: 1.6;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
+  font-weight: 400;
 }
 
 .hero-stats-row {
   display: flex;
-  gap: 28px;
-  padding-top: 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 32px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .hero-stat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .stat-val {
   font-family: var(--font-display);
   font-size: 22px;
   font-weight: 700;
-  color: var(--accent);
+  color: #2FE0C4;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .stat-lbl {
-  font-size: 11px;
-  color: var(--text-faint);
+  font-size: 11.5px;
+  color: rgba(203, 213, 225, 0.85);
   letter-spacing: 0.03em;
+  font-weight: 500;
 }
 
 /* Right: Form Side */
