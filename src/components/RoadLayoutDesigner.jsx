@@ -255,7 +255,7 @@ export default function RoadLayoutDesigner({
   const [numLanes, setNumLanes] = useState(initialLoc?.numLanes || 3);
   const [roadWidthScale, setRoadWidthScale] = useState(initialLoc?.roadWidthScale || 1.0);
   const [speedLimit, setSpeedLimit] = useState(initialLoc?.speedLimit || 90);
-  const [gridTheme, setGridTheme] = useState('dark-grid');
+  const [gridTheme, setGridTheme] = useState('light-grid');
 
   // Layer Toggles
   const [showFovCones, setShowFovCones] = useState(true);
@@ -456,21 +456,22 @@ export default function RoadLayoutDesigner({
       return i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`;
     }, '');
 
-    // 1. Base Road Shadow
+    // 1. Base Road Border & Shadow
     const roadGlow = new fabric.Path(pathD, {
       fill: '',
-      stroke: 'rgba(30, 41, 59, 0.7)',
-      strokeWidth: totalAsphaltWidth + 8,
+      stroke: '#CBD5E1',
+      strokeWidth: totalAsphaltWidth + 4,
       strokeLineCap: 'round',
       strokeLineJoin: 'round',
       selectable: false,
-      evented: false
+      evented: false,
+      shadow: new fabric.Shadow({ color: 'rgba(15, 23, 42, 0.08)', blur: 6, offsetX: 0, offsetY: 2 })
     });
 
-    // 2. Asphalt Body
+    // 2. Light Grey Asphalt Body
     const asphaltMain = new fabric.Path(pathD, {
       fill: '',
-      stroke: '#1E293B',
+      stroke: '#E2E8F0',
       strokeWidth: totalAsphaltWidth,
       strokeLineCap: 'round',
       strokeLineJoin: 'round',
@@ -478,10 +479,10 @@ export default function RoadLayoutDesigner({
       evented: false
     });
 
-    // 3. SmartLane Shoulder Zone
+    // 3. SmartLane Shoulder Zone (Soft Highlight)
     const smartLaneShoulder = new fabric.Path(pathD, {
       fill: '',
-      stroke: 'rgba(234, 179, 8, 0.25)',
+      stroke: smartLaneOpenInSim ? 'rgba(13, 148, 136, 0.16)' : 'rgba(245, 158, 11, 0.12)',
       strokeWidth: totalAsphaltWidth - 6,
       strokeLineCap: 'round',
       strokeLineJoin: 'round',
@@ -492,19 +493,19 @@ export default function RoadLayoutDesigner({
     // 4. Outer Guard Line
     const edgeLineLeft = new fabric.Path(pathD, {
       fill: '',
-      stroke: '#E2E8F0',
-      strokeWidth: 2,
+      stroke: '#94A3B8',
+      strokeWidth: 1.5,
       strokeLineCap: 'round',
       strokeLineJoin: 'round',
       selectable: false,
       evented: false
     });
 
-    // 5. Solid Yellow Barrier Line
+    // 5. Solid Amber/Yellow Barrier Line
     const shoulderSeparator = new fabric.Path(pathD, {
       fill: '',
-      stroke: '#FBBF24',
-      strokeWidth: 2.5,
+      stroke: '#F59E0B',
+      strokeWidth: 2,
       strokeLineCap: 'round',
       strokeLineJoin: 'round',
       selectable: false,
@@ -764,22 +765,23 @@ export default function RoadLayoutDesigner({
     const trussBar = new fabric.Rect({
       width: 4,
       height: 28,
-      fill: '#475569',
-      stroke: '#0F172A',
+      fill: '#64748B',
+      stroke: '#334155',
       strokeWidth: 1,
       originX: 'center',
       originY: 'center'
     });
     elements.push(trussBar);
 
-    // Halo
+    // Halo Badge
     const halo = new fabric.Circle({
       radius: 13,
-      fill: 'rgba(15, 23, 42, 0.9)',
-      stroke: eqMeta.color,
+      fill: eqMeta.color,
+      stroke: '#FFFFFF',
       strokeWidth: 2.5,
       originX: 'center',
-      originY: 'center'
+      originY: 'center',
+      shadow: new fabric.Shadow({ color: 'rgba(15, 23, 42, 0.25)', blur: 5, offsetX: 0, offsetY: 2 })
     });
     elements.push(halo);
 
@@ -802,7 +804,7 @@ export default function RoadLayoutDesigner({
       angle: angle,
       hasControls: false,
       hasBorders: true,
-      borderColor: '#38BDF8',
+      borderColor: '#2563EB',
       borderScaleFactor: 2,
       lockScalingX: true,
       lockScalingY: true,
@@ -1674,7 +1676,7 @@ export default function RoadLayoutDesigner({
             <div className="form-group-rich" style={{ marginTop: '4px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
                 <label className="field-label-rich" style={{ margin: 0 }}>Road Width / Asphalt Scale</label>
-                <span style={{ fontSize: '10.5px', color: '#38BDF8', fontFamily: 'monospace', fontWeight: 800 }}>
+                <span style={{ fontSize: '10.5px', color: 'var(--brand)', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>
                   {Math.round(roadWidthScale * 100)}% ({Math.round(numLanes * 14 * roadWidthScale + 16 * roadWidthScale + 10)}px)
                 </span>
               </div>
@@ -1685,7 +1687,7 @@ export default function RoadLayoutDesigner({
                 step="0.05"
                 value={roadWidthScale}
                 onChange={(e) => setRoadWidthScale(parseFloat(e.target.value))}
-                style={{ width: '100%', accentColor: '#38BDF8', cursor: 'pointer', height: '6px' }}
+                style={{ width: '100%', accentColor: 'var(--brand)', cursor: 'pointer', height: '6px' }}
                 title="Adjust asphalt road thickness / visual scale"
               />
             </div>
@@ -1696,13 +1698,12 @@ export default function RoadLayoutDesigner({
             </div>
           </div>
 
-          {/* Section 2: Road Alignment & Path */}
           {/* Section 2: Road Alignment & Path (2 Editable Shapes) */}
           <div className="panel-section-rich">
             <div className="section-title-rich">
               <span className="num-badge">2</span>
               <span>Road Shape &amp; Alignment</span>
-              {mode === 'editing-nodes' && <span className="arming-tag" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', borderColor: '#F59E0B' }}>Drag Yellow Nodes</span>}
+              {mode === 'editing-nodes' && <span className="arming-tag">Drag Nodes</span>}
             </div>
 
             {/* 2 Primary Editable Road Shapes */}
@@ -1758,9 +1759,9 @@ export default function RoadLayoutDesigner({
 
             {/* Move Whole Road D-Pad */}
             {isRoadFinished && (
-              <div style={{ marginTop: '8px', padding: '6px 8px', background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(51, 65, 85, 0.6)', borderRadius: '6px' }}>
+              <div style={{ marginTop: '8px', padding: '6px 8px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '6px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '9.5px', color: '#94A3B8' }}>Shift Road:</span>
+                  <span style={{ fontSize: '9.5px', color: 'var(--text-dim)' }}>Shift Road:</span>
                   <div style={{ display: 'flex', gap: '3px' }}>
                     <button className="shift-dpad-btn" onClick={() => handleShiftRoad(-25, 0)} title="Shift Left 25px">◀</button>
                     <button className="shift-dpad-btn" onClick={() => handleShiftRoad(25, 0)} title="Shift Right 25px">▶</button>
@@ -1892,9 +1893,9 @@ export default function RoadLayoutDesigner({
               {/* Grid Selector */}
               <div className="grid-switcher">
                 <button
-                  className={gridTheme === 'dark-grid' ? 'active' : ''}
-                  onClick={() => setGridTheme('dark-grid')}
-                  title="Dark Cyber Grid"
+                  className={gridTheme === 'light-grid' || gridTheme === 'dark-grid' ? 'active' : ''}
+                  onClick={() => setGridTheme('light-grid')}
+                  title="Daylight CAD Grid"
                 >
                   ▦
                 </button>
@@ -2256,7 +2257,7 @@ export default function RoadLayoutDesigner({
 
                   <div className="road-waypoints-section" style={{ marginTop: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#F8FAFC', textTransform: 'uppercase' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase' }}>
                         Manual Node Coordinates (X, Y)
                       </span>
                       <button className="sub-action-chip active" onClick={handleAddCurvePoint} style={{ padding: '2px 8px', fontSize: '10px' }}>
@@ -2269,34 +2270,34 @@ export default function RoadLayoutDesigner({
                         if (!pt || typeof pt.x !== 'number' || typeof pt.y !== 'number') return null;
                         const isStart = idx === 0;
                         const isEnd = idx === arr.length - 1;
-                        const badgeColor = isStart ? '#10B981' : isEnd ? '#EF4444' : '#38BDF8';
+                        const badgeColor = isStart ? 'var(--green)' : isEnd ? 'var(--red)' : 'var(--brand)';
                         const nodeLabel = isStart ? 'Node #1 (Start)' : isEnd ? `Node #${idx + 1} (End)` : `Node #${idx + 1}`;
                         return (
-                          <div key={idx} className="node-coord-row" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(15, 23, 42, 0.85)', padding: '5px 8px', borderRadius: '6px', border: '1px solid rgba(51, 65, 85, 0.7)' }}>
+                          <div key={idx} className="node-coord-row" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--surface-2)', padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: badgeColor, display: 'inline-block', flexShrink: 0 }}></span>
-                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#CBD5E1', width: '85px', flexShrink: 0 }}>{nodeLabel}</span>
+                            <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text)', width: '85px', flexShrink: 0 }}>{nodeLabel}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <span style={{ fontSize: '9px', color: '#64748B' }}>X:</span>
+                              <span style={{ fontSize: '9.5px', color: 'var(--text-faint)' }}>X:</span>
                               <input
                                 type="number"
                                 value={Math.round(pt.x || 0)}
                                 onChange={(e) => handleUpdateNodeCoord(idx, 'x', e.target.value)}
-                                style={{ width: '52px', padding: '2px 4px', fontSize: '10.5px', background: '#090E1A', border: '1px solid #334155', color: '#38BDF8', borderRadius: '4px', textAlign: 'center', fontFamily: 'monospace' }}
+                                style={{ width: '52px', padding: '2px 4px', fontSize: '10.5px', background: '#FFFFFF', border: '1px solid var(--border)', color: 'var(--brand)', borderRadius: '4px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}
                               />
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <span style={{ fontSize: '9px', color: '#64748B' }}>Y:</span>
+                              <span style={{ fontSize: '9.5px', color: 'var(--text-faint)' }}>Y:</span>
                               <input
                                 type="number"
                                 value={Math.round(pt.y || 0)}
                                 onChange={(e) => handleUpdateNodeCoord(idx, 'y', e.target.value)}
-                                style={{ width: '52px', padding: '2px 4px', fontSize: '10.5px', background: '#090E1A', border: '1px solid #334155', color: '#38BDF8', borderRadius: '4px', textAlign: 'center', fontFamily: 'monospace' }}
+                                style={{ width: '52px', padding: '2px 4px', fontSize: '10.5px', background: '#FFFFFF', border: '1px solid var(--border)', color: 'var(--brand)', borderRadius: '4px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}
                               />
                             </div>
                             {!isStart && !isEnd && (
                               <button
                                 onClick={() => handleDeleteNode(idx)}
-                                style={{ padding: '2px 5px', fontSize: '10px', background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#EF4444', borderRadius: '4px', cursor: 'pointer', marginLeft: 'auto' }}
+                                style={{ padding: '2px 5px', fontSize: '10px', background: 'var(--red-tint)', border: '1px solid #FECACA', color: 'var(--red)', borderRadius: '4px', cursor: 'pointer', marginLeft: 'auto' }}
                                 title="Delete waypoint node"
                               >
                                 ✕
@@ -2316,7 +2317,7 @@ export default function RoadLayoutDesigner({
                         updateWaypointHandles();
                         if (onShowToast) onShowToast('You can now drag waypoint handles directly on the grid canvas.');
                       }}
-                      style={{ width: '100%', padding: '8px', background: 'linear-gradient(135deg, #0284C7, #0369A1)', color: '#FFFFFF', border: 'none', borderRadius: '8px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                      style={{ width: '100%', padding: '8px', background: 'var(--brand)', color: '#FFFFFF', border: 'none', borderRadius: '8px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
                     >
                       📐 Drag Nodes on Grid Canvas
                     </button>

@@ -19,12 +19,12 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '40px', color: '#F8FAFC', background: '#0F172A', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
-          <h2 style={{ color: '#EF4444', margin: 0 }}>⚠️ Road Studio Initializing...</h2>
-          <p style={{ color: '#94A3B8', margin: 0 }}>{this.state.error?.message || 'Reloading workspace geometry.'}</p>
+        <div style={{ padding: '40px', color: 'var(--text)', background: 'var(--canvas)', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+          <h2 style={{ color: 'var(--red)', margin: 0 }}>⚠️ Road Studio Initializing...</h2>
+          <p style={{ color: 'var(--text-dim)', margin: 0 }}>{this.state.error?.message || 'Reloading workspace geometry.'}</p>
           <button
             onClick={() => { this.setState({ hasError: false }); }}
-            style={{ padding: '8px 18px', background: '#2563EB', color: '#FFF', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 800 }}
+            style={{ padding: '8px 18px', background: 'var(--brand)', color: '#FFF', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 800 }}
           >
             🔄 Refresh Canvas
           </button>
