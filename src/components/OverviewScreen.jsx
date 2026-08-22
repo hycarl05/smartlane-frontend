@@ -159,7 +159,7 @@ export default function OverviewScreen({
                 <div className={`status-pill ${loc.status}`}>
                   <span className="dot"></span>
                   {isActive
-                    ? `ACTIVE - P${loc.phase || 2}`
+                    ? `ACTIVE · P${loc.phase || 2}`
                     : isPending
                     ? 'ATTENTION'
                     : 'INACTIVE'}
@@ -168,7 +168,7 @@ export default function OverviewScreen({
 
               {/* Action Column */}
               <div className="loc-row-action">
-                <div className={`alarm-badge ${alarmCount === 0 ? 'none' : ''}`}>
+                <div className={`alarm-text ${alarmCount > 0 ? 'has-alarm' : 'no-alarm'}`}>
                   <b>{alarmCount}</b> {alarmCount === 1 ? 'alarm' : 'alarms'}
                 </div>
                 <button

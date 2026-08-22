@@ -7,7 +7,7 @@ export const INITIAL_LOCATIONS = [
     mode: 'scheduled',
     phase: 2,
     phaseLabel: 'Activation',
-    elapsedSeconds: 862,
+    elapsedSeconds: 29662,
     ps: '14:24:00',
     pe: '15:24:00',
     los: 'D',

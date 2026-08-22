@@ -338,13 +338,12 @@ button {
 .ov-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 28px 40px;
+  padding: 24px 32px 40px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-width: 1440px;
-  margin: 0 auto;
+  gap: 20px;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .ov-head {
@@ -474,16 +473,48 @@ button {
   background: #FFFFFF;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px 22px;
+  padding: 18px 24px;
   display: grid;
-  grid-template-columns: 240px 140px 1fr 140px 100px;
+  grid-template-columns: 320px 1fr 160px 220px;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: all 0.18s ease;
   position: relative;
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.loc-row-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.alarm-text {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.alarm-text.has-alarm {
+  color: #DC2626;
+}
+.alarm-text.no-alarm {
+  color: #059669;
+}
+
+.alarm-badge {
+  display: inline-block;
+  background: #FEE2E2;
+  color: #DC2626;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #FECACA;
 }
 .loc-row:hover {
   border-color: var(--brand);
