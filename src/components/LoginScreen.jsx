@@ -43,20 +43,6 @@ export default function LoginScreen({ onLogin }) {
           <p className="hero-description">
             Real-time emergency lane dynamic activation, LCS gantry automation &amp; incident response.
           </p>
-          <div className="hero-stats-row">
-            <div className="hero-stat">
-              <span className="stat-val">8</span>
-              <span className="stat-lbl">Active Corridors</span>
-            </div>
-            <div className="hero-stat">
-              <span className="stat-val">99.4%</span>
-              <span className="stat-lbl">Sensor Uptime</span>
-            </div>
-            <div className="hero-stat">
-              <span className="stat-val">&lt;2min</span>
-              <span className="stat-lbl">Incident Response</span>
-            </div>
-          </div>
         </div>
       </div>
 
