@@ -444,7 +444,7 @@ export default function LocationScreen({
             <div className="route-card">
               <div className="route-head">
                 <div className="route-title">
-                  LIVE ROUTE TIMELINE<span className="sub"> — {loc.direction || 'Northbound'}</span>
+                  Live Route Timeline<span className="sub"> — {loc.direction || 'Northbound'}</span>
                 </div>
                 <button className="match-btn" onClick={handleMatchLCS}>
                   Match LCS to lane state
