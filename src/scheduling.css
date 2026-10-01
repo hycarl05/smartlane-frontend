@@ -1,0 +1,23 @@
+.unified-location-shell .tab-panel.active.scheduling-page { display: block; overflow: auto; padding: 18px; }
+.scheduling-page { color: var(--text); font-size: 14px; line-height: 1.5; }
+.scheduling-page h2 { font-size: 21px; } .scheduling-page h3 { margin: 20px 0 10px; }
+.scheduling-page p { margin: 10px 0; }
+.scheduling-page label, .schedule-form-grid label { display: flex; flex-direction: column; gap: 5px; }
+.scheduling-page button, .scheduling-page input, .scheduling-page select, .schedule-form-grid input, .schedule-form-grid select, .schedule-form-grid textarea, .monitoring-dialog textarea { min-height: 40px; padding: 8px; border: 1px solid var(--border-strong); border-radius: 6px; font: inherit; background: white; color: var(--text); max-width: 100%; }
+.scheduling-page button:disabled { opacity: .5; cursor: not-allowed; }
+.scheduling-page :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+.schedule-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
+.schedule-form-grid fieldset { padding: 10px; border: 1px solid var(--border); grid-column: 1 / -1; }
+.schedule-days { display: flex; flex-wrap: wrap; gap: 12px; } .schedule-days label { flex-direction: row; align-items: center; }
+.schedule-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 7px; margin-top: 14px; }
+.schedule-calendar article { padding: 8px; border: 1px solid var(--border); border-radius: 7px; background: white; min-height: 100px; overflow-wrap: anywhere; }
+.schedule-calendar button { display: block; width: 100%; text-align: left; margin: 5px 0; font-size: 12px; }
+.schedule-calendar small { display: block; color: var(--text-dim); }
+.schedule-calendar .occurrence-suppressed { background: #f1f5f9; }
+.schedule-calendar .occurrence-overridden { background: #dbeafe; }
+.schedule-calendar .occurrence-conflicting { background: #fee2e2; color: #991b1b; }
+.schedule-sample { overflow: auto; white-space: pre; background: #f1f5f9; padding: 10px; font-size: 12px; }
+.schedule-overview { display: block; max-width: 360px; white-space: normal; }
+.quick-operation { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+@media(max-width:1000px) { .schedule-calendar { grid-template-columns: repeat(3, minmax(0,1fr)); } .calendar-day-heading, .calendar-filler { display: none; } }
+@media(max-width:600px) { .schedule-calendar, .schedule-form-grid { grid-template-columns: 1fr; } .scheduling-page .equipment-heading > * { width: 100%; } }

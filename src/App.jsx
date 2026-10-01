@@ -1,9 +1,20 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useReducer, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import OverviewScreen from './components/OverviewScreen';
 import LocationScreen from './components/LocationScreen';
 import RoadLayoutDesigner from './components/RoadLayoutDesigner';
 import { INITIAL_LOCATIONS, INITIAL_AUDIT_LOGS } from './data';
+import { buildEquipment } from './equipment';
+import './equipment.css';
+import './operations.css';
+import './scheduling.css';
+import './administration.css';
+import { initialAdministration, adminReducer, applyConfiguration, adminAudit, previewAdministrator } from './administration';
+import { capabilities, moduleAllowed, operationActionAllowed, accessKey } from './access';
+import AccessPreview from './components/AccessPreview';
+import { AccessContext } from './accessContext';
+import { nextSchedule, displayTime, SCHEDULE_ZONE } from './scheduling';
+import { initialOperations, operationReducer, operationAudit, projectLocation } from './operations';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -41,8 +52,42 @@ export default function App() {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
-  const [locations, setLocations] = useState(INITIAL_LOCATIONS);
-  const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
+  const [inventory, setLocations] = useState(INITIAL_LOCATIONS);
+  const [administration, dispatchAdmin] = useReducer(adminReducer, INITIAL_LOCATIONS, initialAdministration);
+  const [personaId, setPersonaId] = useState('PREVIEW-ADMIN');
+  const [accessNotice, setAccessNotice] = useState('');
+  const previewAdmin = previewAdministrator(inventory.map(l => l.id));
+  const persona = personaId === previewAdmin.id ? previewAdmin : administration.users.find(u => u.id === personaId);
+  const revision = accessKey(persona);
+  const previousAccess = useRef(revision);
+  useEffect(() => { if (previousAccess.current !== revision) { setAccessNotice('Demo access changed. Open dialogs and unsaved entries were closed; shared operations remain intact.'); previousAccess.current = revision; } }, [revision]);
+  const latestAccess = useRef(null);
+  latestAccess.current = { persona, revision };
+  const validContext = () => {
+    if (latestAccess.current.revision !== revision) { setAccessNotice('Access context changed. Submission was blocked; reopen the view.'); return false; }
+    return true;
+  };
+  const choosePersona = id => { setPersonaId(id); setAccessNotice('Demo access context changed. Open dialogs and unsaved entries were closed; pending operations are retained.'); };
+  const [operations, dispatchOperation] = useReducer(operationReducer, INITIAL_LOCATIONS, initialOperations);
+  const locations = useMemo(() => inventory.map(loc => {
+    const summary = nextSchedule(operations.scheduleStore, loc.id, operations.now);
+    return { ...projectLocation(loc, operations.byId[loc.id], operations.now), scheduleSummary: summary,
+      nextRun: summary.next ? `${displayTime(summary.next.start)} ${SCHEDULE_ZONE}` : 'No upcoming effective occurrence (366-day preview)' };
+  }), [inventory, operations]);
+  const sendOperation = action => {
+    if (!validContext() || !operationActionAllowed(latestAccess.current.persona, action, operations.scheduleStore)) { setAccessNotice('This action is unavailable for the current demo persona/location. No operation or schedule was changed.'); return false; }
+    dispatchOperation({ ...action, now: Date.now(), actor: `Demo persona ${persona.id}` });
+    return true;
+  };
+  const [legacyAuditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
+  const auditLogs = useMemo(() => [...adminAudit(administration.events, inventory), ...operationAudit(operations.events, inventory), ...legacyAuditLogs], [administration.events, operations.events, inventory, legacyAuditLogs]);
+  const equipmentRecords = useMemo(() => applyConfiguration(buildEquipment(locations), administration.configs), [locations, administration.configs]);
+  const visibleLocations = locations.filter(l => capabilities(persona, l.id).read);
+  const visibleDevices = equipmentRecords.filter(d => capabilities(persona, d.locationId).read);
+  const sendAdmin = action => {
+    if (!validContext()) return;
+    dispatchAdmin({ ...action, actorId: latestAccess.current.persona?.id, now: operations.now, devices: equipmentRecords, locationIds: inventory.map(l => l.id) });
+  };
   const [activeLocId, setActiveLocId] = useState(INITIAL_LOCATIONS[0]?.id || 'loc-1');
   const [activeNavTab, setActiveNavTab] = useState('overview'); // 'overview' | 'corridor' | 'vms' | 'schedule' | 'log' | 'reports' | 'designer' | 'settings'
 
@@ -56,6 +101,11 @@ export default function App() {
   const activeLoc = useMemo(() => {
     return locations.find(l => l.id === activeLocId) || locations[0] || null;
   }, [locations, activeLocId]);
+
+  useEffect(() => {
+    if (visibleLocations.length && !visibleLocations.some(l => l.id === activeLocId)) setActiveLocId(visibleLocations[0].id);
+    if (!moduleAllowed(persona, activeNavTab, activeNavTab === 'overview' ? undefined : activeLocId)) setActiveNavTab('overview');
+  }, [revision, activeLocId, activeNavTab, visibleLocations, persona]);
 
   // Total active alarm tally across all corridors
   const totalAlarmsCount = useMemo(() => {
@@ -85,92 +135,18 @@ export default function App() {
     setAuditLogs(prev => [newLog, ...prev]);
   };
 
-  // Clock tick timer & automated 5-phase operations engine
+  // Timestamp-driven demo clock; transitions and events share one reducer.
   useEffect(() => {
-    const tick = () => {
-      const now = new Date();
-      setClockTime(now.toLocaleTimeString('en-GB', { hour12: false }));
-      setClockDate(
-        now.toLocaleDateString('en-GB', {
-          weekday: 'long',
-          day: '2-digit',
-          month: 'long',
-          year: 'numeric'
-        })
-      );
-
-      // Increment elapsedSeconds and process 5-phase operational transitions
-      setLocations(prevLocs =>
-        prevLocs.map(l => {
-          if (l.status === 'active' || (l.phase && l.phase > 0)) {
-            const nextElapsed = (l.elapsedSeconds || 0) + 1;
-            const phaseTimer = (l.phaseTimer || 0) > 0 ? l.phaseTimer - 1 : 0;
-
-            if (l.phase === 1 && phaseTimer === 0) {
-              const updatedLCS = (l.lcs || []).map(item => ({ ...item, open: true }));
-              return {
-                ...l,
-                phase: 2,
-                phaseLabel: 'Phase 2: Active Operation',
-                status: 'active',
-                phaseTimer: 0,
-                elapsedSeconds: nextElapsed,
-                lcs: updatedLCS,
-                timestamps: {
-                  ...(l.timestamps || {}),
-                  p2Activation: now.toLocaleTimeString('en-GB', { hour12: false })
-                }
-              };
-            }
-
-            if (l.phase === 3 && phaseTimer === 0) {
-              const updatedLCS = (l.lcs || []).map(item => ({ ...item, open: false }));
-              return {
-                ...l,
-                phase: 4,
-                phaseLabel: 'Phase 4: Deactivation',
-                status: 'inactive',
-                phaseTimer: 5,
-                elapsedSeconds: 0,
-                lcs: updatedLCS,
-                timestamps: {
-                  ...(l.timestamps || {}),
-                  p4Deactivation: now.toLocaleTimeString('en-GB', { hour12: false })
-                }
-              };
-            }
-
-            if (l.phase === 4 && phaseTimer === 0) {
-              return {
-                ...l,
-                phase: 5,
-                phaseLabel: 'Phase 5: Post-Activation & Reporting',
-                status: 'inactive',
-                phaseTimer: 0,
-                elapsedSeconds: 0,
-                timestamps: {
-                  ...(l.timestamps || {}),
-                  p5PostDeactivation: now.toLocaleTimeString('en-GB', { hour12: false })
-                }
-              };
-            }
-
-            return {
-              ...l,
-              elapsedSeconds: l.status === 'active' ? nextElapsed : 0,
-              phaseTimer: phaseTimer
-            };
-          }
-          return l;
-        })
-      );
-    };
-
+    const tick = () => dispatchOperation({ type: 'TICK', now: Date.now(), actor: 'Demo clock' });
     tick();
-    const interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
   }, []);
-
+  useEffect(() => {
+    const now = new Date(operations.now);
+    setClockTime(now.toLocaleTimeString('en-GB', { hour12: false }));
+    setClockDate(now.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }));
+  }, [operations.now]);
   const triggerToast = (msg) => {
     setToastMsg(msg);
     setShowToast(true);
@@ -203,7 +179,12 @@ export default function App() {
     }
   };
 
-  const handleUpdateLocation = (id, updatedFields) => {
+  const handleUpdateLocation = (id, fields) => {
+    if (!validContext() || !capabilities(latestAccess.current.persona, id).vmsEdit) { setAccessNotice('Configuration editing is unavailable in this demo access context.'); return; }
+    // Configuration editors cannot bypass the operation reducer.
+    const protectedKeys = ['status', 'mode', 'phase', 'phaseLabel', 'phaseTimer', 'elapsedSeconds', 'ps', 'pe', 'timestamps', 'operation', 'lcs'];
+    const updatedFields = Object.fromEntries(Object.entries(fields).filter(([key]) => !protectedKeys.includes(key)));
+    if (!Object.keys(updatedFields).length) return;
     const locObj = locations.find(l => l.id === id);
     setLocations(prevLocs =>
       prevLocs.map(l => (l.id === id ? { ...l, ...updatedFields } : l))
@@ -220,6 +201,8 @@ export default function App() {
   };
 
   const handleSaveNewLocation = (newLocObj) => {
+    if (!validContext() || !capabilities(latestAccess.current.persona).design) return;
+    dispatchOperation({ type: 'REGISTER', locationId: newLocObj.id });
     setLocations(prevLocs => {
       const exists = prevLocs.find(l => l.id === newLocObj.id);
       if (exists) {
@@ -252,10 +235,21 @@ export default function App() {
 
   return (
     <div className="app-container">
+      <AccessContext.Provider value={{ persona, notice: accessNotice, caps: capabilities(persona, activeLocId), allowed: (tab) => moduleAllowed(persona, tab, activeLocId), revoke: () => choosePersona('DEMO-OVERVIEW') }}>
       <main style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {activeNavTab === 'overview' ? (
-          <OverviewScreen
-            locations={locations}
+        <AccessPreview users={[previewAdmin, ...administration.users]} selected={personaId} onSelect={choosePersona} notice={accessNotice} />
+        {Object.values(operations.byId).some(op => capabilities(persona, op.locationId).operate && (op.pendingDecision || op.notification || op.intervention || ['Simulated success', 'Expired', 'Cancelled'].includes(op.command.status))) && <aside className="operation-inbox" aria-label="Persistent operation decisions">
+          <strong>Operation decisions and outcomes (simulation)</strong>
+          {Object.values(operations.byId).filter(op => capabilities(persona, op.locationId).operate && (op.pendingDecision || op.notification || op.intervention || ['Simulated success', 'Expired', 'Cancelled'].includes(op.command.status))).map(op => <button key={op.locationId} onClick={() => { setActiveLocId(op.locationId); setActiveNavTab('corridor'); }}>
+            {inventory.find(l => l.id === op.locationId)?.name}: {op.pendingDecision?.kind || op.notification?.kind || (op.intervention ? 'Intervention active' : op.lastResult)}
+          </button>)}
+        </aside>}
+        {!visibleLocations.length ? <div className="equipment-state"><h2>No authorized locations in this demo preview</h2><p>The selected user is inactive or has no location assignments. Shared operations and saved records remain intact. Select another demo persona above.</p><button onClick={() => choosePersona('PREVIEW-ADMIN')}>Return to preview administrator</button><button onClick={handleLogout}>Return to login</button></div> : activeNavTab === 'overview' || !moduleAllowed(persona, activeNavTab, activeLocId) ? (
+          <OverviewScreen key={revision}
+            operationNow={operations.now}
+            onQuickOperation={(locationId, kind) => { sendOperation({ type: 'REQUEST', locationId, kind, durationMinutes: 30 }); setActiveLocId(locationId); setActiveNavTab('corridor'); }}
+            equipmentRecords={visibleDevices}
+            locations={visibleLocations}
             auditLogs={auditLogs}
             onSelectLocation={(locId, tab = 'overview') => {
               setActiveLocId(locId);
@@ -283,9 +277,18 @@ export default function App() {
             </ErrorBoundary>
           </div>
         ) : (
-          <LocationScreen
+          <LocationScreen key={`${revision}:${activeLocId}`}
+            administration={administration}
+            onAdmin={sendAdmin}
+            administrationLocations={inventory}
+            scheduleStore={operations.scheduleStore}
+            operations={operations}
+            operation={operations.byId[activeLocId]}
+            operationNow={operations.now}
+            onOperation={sendOperation}
+            equipmentRecords={visibleDevices}
             loc={activeLoc}
-            locations={locations}
+            locations={visibleLocations}
             auditLogs={auditLogs}
             onSelectLocation={(locId, tab) => {
               setActiveLocId(locId);
@@ -307,6 +310,7 @@ export default function App() {
           />
         )}
       </main>
+      </AccessContext.Provider>
 
       {/* Global Toast */}
       <div id="toast" className={showToast ? 'show' : ''}>

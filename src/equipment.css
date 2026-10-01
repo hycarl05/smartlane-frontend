@@ -1,0 +1,65 @@
+/* Phase 1 monitoring extends the existing daylight palette. */
+.equipment-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid currentColor; border-radius: 20px; font-size: 12px; font-weight: 700; white-space: nowrap; line-height: 1.4; }
+.equipment-good { color: #166534; background: #dcfce7; }
+.equipment-warn { color: #92400e; background: #fef3c7; }
+.equipment-bad { color: #991b1b; background: #fee2e2; }
+.equipment-unknown { color: #475569; background: #f1f5f9; }
+.equipment-connection { color: #1e40af; background: #dbeafe; }
+.equipment-text-bad { color: #991b1b; } .equipment-text-warn { color: #92400e; }
+.unified-location-shell .tab-panel.active.equipment-page, .unified-location-shell .tab-panel.active.equipment-log-page { display: block; overflow: auto; padding: 16px; }
+.equipment-page, .monitoring-dialog { color: var(--text); font-size: 14px; line-height: 1.5; }
+.equipment-heading, .equipment-toolbar, .equipment-pagination, .equipment-summary { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.equipment-heading h2 { font-size: 22px; } .equipment-heading p, .equipment-alarms > p { color: var(--text-dim); }
+.equipment-page label, .equipment-pagination label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; }
+.equipment-page input, .equipment-page select, .equipment-page button, .equipment-summary button, .equipment-alarms button, .monitoring-dialog button { min-height: 40px; padding: 8px 12px; font: inherit; border: 1px solid var(--border-strong); border-radius: 7px; background: white; color: var(--text); }
+.equipment-page button:hover:not(:disabled), .monitoring-dialog button:hover, .equipment-summary button:hover { background: var(--brand-tint); }
+.equipment-page button:disabled { opacity: .5; cursor: not-allowed; }
+.equipment-page :focus-visible, .monitoring-dialog :focus-visible, .equipment-summary :focus-visible, .equipment-stem :focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.equipment-filters { margin: 16px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.equipment-filters input, .equipment-filters select { width: 100%; min-width: 0; }
+.equipment-summary { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin: 10px 0; flex-shrink: 0; }
+.equipment-summary small { display: block; color: var(--text-dim); }
+.equipment-summary-counts { display: flex; flex-wrap: wrap; gap: 10px; }
+.equipment-toolbar { margin: 15px 0 8px; } .equipment-toolbar > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.equipment-notice { padding: 10px; border-left: 3px solid var(--brand); background: var(--surface-2); margin: 10px 0; }
+.equipment-stale { padding: 12px; background: #fef3c7; color: #78350f; margin: 12px 0; }
+.equipment-stale-label { display: block; color: #92400e; font-size: 12px; }
+.equipment-table-scroll { overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: white; }
+.equipment-table { width: 100%; min-width: 1050px; border-collapse: collapse; font-size: 13px; }
+.equipment-table caption { text-align: left; padding: 12px; color: var(--text-dim); }
+.equipment-table td, .equipment-table th { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.equipment-table thead th { background: var(--surface-2); }
+.equipment-table th button { background: transparent; border: 0; text-align: left; font-weight: 700; }
+.equipment-table small { display: block; color: var(--text-dim); overflow-wrap: anywhere; font-weight: 400; }
+.equipment-pagination { justify-content: flex-end; padding: 14px 0; }
+.equipment-state { text-align: center; padding: 40px 20px; background: white; border: 1px dashed var(--border-strong); border-radius: 12px; }
+.equipment-state button { margin-top: 12px; }
+.equipment-alarms { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 16px 0; }
+.equipment-alarms ul { list-style: none; padding: 0; } .equipment-alarms li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(160px, .6fr) auto; gap: 14px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.equipment-alarms li p { margin: 4px 0; }
+.monitoring-backdrop { position: fixed; inset: 0; z-index: 10000; background: #0f172a99; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.monitoring-dialog { width: min(800px, 100%); max-height: calc(100dvh - 32px); overflow: auto; background: white; border-radius: 14px; box-shadow: var(--shadow-lg); padding: 22px; }
+.monitoring-dialog header { display: flex; justify-content: space-between; gap: 14px; align-items: start; } .monitoring-dialog h2 { font-size: 21px; overflow-wrap: anywhere; } .monitoring-dialog h3 { margin: 20px 0 8px; }
+.equipment-details-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 18px 0; }
+.equipment-details-grid dt { font-size: 12px; font-weight: 700; color: var(--text-dim); } .equipment-details-grid dd { margin: 4px 0; overflow-wrap: anywhere; }
+.equipment-history { list-style: none; padding: 0; } .equipment-history li { border-top: 1px solid var(--border); padding: 12px 0; display: flex; flex-wrap: wrap; gap: 8px; } .equipment-history p { width: 100%; }
+.equipment-preview-status { display: flex; flex-wrap: wrap; gap: 16px; margin: 14px 0; }
+.equipment-camera-preview { background: #1e293b; color: white; border-radius: 10px; margin: 16px 0; overflow: hidden; } .equipment-camera-preview svg { width: 100%; display: block; } .equipment-camera-preview > p { padding: 40px 20px; }
+.route-track-wrap { overflow-x: auto; } .stems { min-width: max-content; gap: 18px; } .equipment-stem { min-width: 145px; gap: 5px; } .equipment-stem > button { border: 0; background: transparent; padding: 4px; } .equipment-stem .stem-km { font-size: 12px; }
+.cam-tile .cam-label { flex-wrap: wrap; gap: 5px; } .cam-tile .equipment-badge { font-size: 11px; }
+.unified-location-shell .tab-panel.active:has(> .equipment-summary) { overflow-y: auto; display: block; }
+.unified-location-shell .tab-panel.active:has(> .equipment-summary) .ov-bottom { min-height: 480px; }
+.unified-location-shell .tabbar { overflow-x: auto; flex-shrink: 0; }
+@media (max-width: 1000px) { .equipment-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) {
+  .equipment-filters, .equipment-details-grid { grid-template-columns: 1fr; }
+  .equipment-alarms li { grid-template-columns: 1fr; }
+  .equipment-heading { align-items: stretch; } .equipment-heading > *, .equipment-heading select { width: 100%; }
+  .monitoring-backdrop { padding: 8px; } .monitoring-dialog { padding: 16px; max-height: calc(100dvh - 16px); }
+  .unified-location-shell .topbar { height: auto; min-height: 52px; flex-wrap: wrap; gap: 8px; }
+  .unified-location-shell .loc-crumb { min-width: 0; max-width: 100%; } .loc-select-breadcrumb { max-width: 100%; }
+  .unified-location-shell .topbar-right .clock { display: none; }
+  .unified-location-shell .tabbar .tab-btn { flex-shrink: 0; }
+  .unified-location-shell .tab-panel.active:has(> .equipment-summary) .ov-bottom { display: block; }
+  .equipment-summary-counts { gap: 7px; }
+}

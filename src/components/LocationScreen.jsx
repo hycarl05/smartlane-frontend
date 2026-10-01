@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import Topbar from './Topbar';
+import React, { useState, useCallback, useEffect } from 'react';
+import EquipmentMonitoring, { EquipmentSummary, EquipmentAlarms } from './EquipmentMonitoring';
+import DeviceDetails from './DeviceDetails';
+import EquipmentStatusBadge from './EquipmentStatusBadge';
+import { equipmentAlarms, isStale } from '../equipment';
+import OperationControls from './OperationControls';
 import Schedule from './Schedule';
-import VmsEditor, { VmsEditorSection, DEFAULT_ROLE_TEMPLATES, getDynamicVmsMessage } from './VmsEditor';
-import CctvModal from './CctvModal';
+import Administration from './Administration';
+import { useAccess } from '../accessContext';
+import VmsEditor, { VmsEditorSection, getDynamicVmsMessage } from './VmsEditor';
 import AuditLogDisplay from './AuditLogDisplay';
 import RoadLayoutDesigner from './RoadLayoutDesigner';
-import RoadSchematicView from './RoadSchematicView';
 import MapView from './MapView';
 import {
-  fmtElapsed,
-  SCHEDULE_ITEMS,
-  WEEK_DAYS,
-  LOG_ENTRIES,
   REPORT_TYPES,
   RECENT_REPORTS
 } from '../data';
@@ -20,6 +20,15 @@ export default function LocationScreen({
   loc,
   locations = [],
   auditLogs = [],
+  equipmentRecords = [],
+  operation,
+  operationNow,
+  onOperation,
+  scheduleStore,
+  operations,
+  administration,
+  onAdmin,
+  administrationLocations,
   onSelectLocation,
   activeTab,
   setActiveTab,
@@ -32,20 +41,24 @@ export default function LocationScreen({
   onShowToast,
   hideTopbars = false
 }) {
-  const [extendMin, setExtendMin] = useState(0);
-  const [showPausePopover, setShowPausePopover] = useState(false);
-  const [logFilter, setLogFilter] = useState('all');
+  const { caps, allowed } = useAccess();
   const [reportType, setReportType] = useState(0);
   const [reportPeriod, setReportPeriod] = useState('Weekly');
-  const [logState, setLogState] = useState(LOG_ENTRIES);
-  const [showPhaseReportModal, setShowPhaseReportModal] = useState(false);
+
+
 
   // VMS Editor Modal State
   const [showVmsEditor, setShowVmsEditor] = useState(false);
   const [vmsModuleType, setVmsModuleType] = useState('vms'); // 'vms' | 'miniVms'
 
   // CCTV Inspection Modal State
-  const [selectedCctv, setSelectedCctv] = useState(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState(null);
+  useEffect(() => { setSelectedDeviceId(null); }, [loc?.id]);
+  const closeDevice = useCallback(() => setSelectedDeviceId(null), []);
+  const devices = equipmentRecords.filter(d => d.locationId === loc?.id);
+  const selectedDevice = devices.find(d => d.id === selectedDeviceId);
+  const currentEquipmentAlarms = equipmentAlarms(devices);
+  const cameras = devices.filter(d => d.type === 'CCTV');
 
   const handleOpenVmsEditor = (type = 'vms') => {
     setVmsModuleType(type);
@@ -54,191 +67,7 @@ export default function LocationScreen({
 
   if (!loc) return null;
 
-  const isActive = loc.status === 'active';
-  const isPending = loc.status === 'pending';
-
-  const addLogEntry = (sev, event, user = 'admin') => {
-    const now = new Date();
-    const tStr = now.toLocaleTimeString('en-GB', { hour12: false });
-    setLogState(prev => [
-      { time: tStr, sev, mod: 'SMARTLANE', event, user },
-      ...prev
-    ]);
-  };
-
-  const handleTogglePrimary = () => {
-    handleStartPhase1();
-  };
-
-  const handleDismissPrompt = () => {
-    const updatedLCS = (loc.lcs || []).map(item => ({ ...item, open: false }));
-    onUpdateLoc(loc.id, {
-      status: 'inactive',
-      phase: 0,
-      phaseLabel: 'Standby Mode',
-      lcs: updatedLCS
-    });
-    addLogEntry('operation', `Dismissed activation recommendation for ${loc.name}`);
-    onShowToast('Activation recommendation dismissed — LCS Red X ✕, VMS Closed');
-  };
-
-  const handleStartPhase1 = () => {
-    // Phase 1: Pre-Activation (3-min warning cycle)
-    const updatedLCS = (loc.lcs || []).map(item => ({ ...item, open: false }));
-    onUpdateLoc(loc.id, {
-      status: 'active',
-      phase: 1,
-      phaseLabel: 'Phase 1: Pre-Activation (Warning Cycle)',
-      phaseTimer: 180, // 3-minute warning cycle
-      elapsedSeconds: 0,
-      ps: time,
-      pe: 'Scheduled',
-      lcs: updatedLCS,
-      timestamps: {
-        ...(loc.timestamps || {}),
-        p1PreActivation: time
-      }
-    });
-    addLogEntry('operation', `Initiated Phase 1 Pre-Activation (3 min warning) for ${loc.name}`);
-    onShowToast(`Phase 1 Pre-Activation: VMS broadcast "PERHATIAN: BERSEDIA SMARTLANE AKAN DIBUKA"`);
-  };
-
-  const handleStartPhase2Now = () => {
-    // Phase 2: Active Operation (Open Smartlane & LCS Green Arrow)
-    const updatedLCS = (loc.lcs || []).map(item => ({ ...item, open: true }));
-    onUpdateLoc(loc.id, {
-      status: 'active',
-      phase: 2,
-      phaseLabel: 'Phase 2: Active Operation',
-      phaseTimer: 0,
-      lcs: updatedLCS,
-      timestamps: {
-        ...(loc.timestamps || {}),
-        p2Activation: time
-      }
-    });
-    addLogEntry('operation', `Phase 2 Active Operation confirmed — LCS Green Arrow ↓ OPEN on ${loc.name}`);
-    onShowToast(`Phase 2 Active: LCS ON Green ↓, VMS broadcast "SMARTLANE BERMULA"`);
-  };
-
-  const handleStartPhase3Deactivation = () => {
-    // Phase 3: Pre-Deactivation (3-min closure warning cycle)
-    onUpdateLoc(loc.id, {
-      status: 'active',
-      phase: 3,
-      phaseLabel: 'Phase 3: Pre-Deactivation (Closure Warning)',
-      phaseTimer: 180, // 3-minute deactivation cycle
-      timestamps: {
-        ...(loc.timestamps || {}),
-        p3PreDeactivation: time
-      }
-    });
-    addLogEntry('operation', `Initiated Phase 3 Pre-Deactivation cycle (3 min warning) for ${loc.name}`);
-    onShowToast(`Phase 3 Pre-Deactivation: VMS broadcast "SMARTLANE AKAN DITUTUP"`);
-  };
-
-  const handleDeactivatePhase4And5 = () => {
-    // Phase 4: Deactivation (Revert LCS to Red X) -> Phase 5 (Post-Activation Report)
-    const updatedLCS = (loc.lcs || []).map(item => ({ ...item, open: false }));
-    onUpdateLoc(loc.id, {
-      status: 'inactive',
-      phase: 4,
-      phaseLabel: 'Phase 4: Deactivation (LCS Red X)',
-      phaseTimer: 5,
-      lcs: updatedLCS,
-      timestamps: {
-        ...(loc.timestamps || {}),
-        p4Deactivation: time
-      }
-    });
-    addLogEntry('operation', `Phase 4 Deactivation: Smartlane CLOSED & LCS Red X ✕ on ${loc.name}`);
-    onShowToast(`Phase 4 Deactivated: LCS Red X ✕, VMS broadcast "SMARTLANE DITUTUP"`);
-  };
-
-  const handleStartPhase5Report = () => {
-    const updatedLCS = (loc.lcs || []).map(item => ({ ...item, open: false }));
-    onUpdateLoc(loc.id, {
-      status: 'inactive',
-      phase: 5,
-      phaseLabel: 'Phase 5: Post-Activation & Reporting',
-      phaseTimer: 0,
-      lcs: updatedLCS,
-      timestamps: {
-        ...(loc.timestamps || {}),
-        p5PostDeactivation: time
-      }
-    });
-    addLogEntry('operation', `Entered Phase 5: Post-Activation Report for ${loc.name}`);
-    onShowToast(`Phase 5: Operational Report Ready`);
-    setShowPhaseReportModal(true);
-  };
-
-  const handleResetToStandby = () => {
-    const updatedLCS = (loc.lcs || []).map(item => ({ ...item, open: false }));
-    onUpdateLoc(loc.id, {
-      status: 'inactive',
-      phase: 0,
-      phaseLabel: 'Standby Mode',
-      elapsedSeconds: 0,
-      phaseTimer: 0,
-      lcs: updatedLCS
-    });
-    setShowPhaseReportModal(false);
-    addLogEntry('operation', `Reset system back to Standby (Phase 0) for ${loc.name}`);
-    onShowToast('System reset to Standby mode — Ready for next activation');
-  };
-
-  const handlePauseReason = (reason) => {
-    setShowPausePopover(false);
-    onUpdateLoc(loc.id, {
-      status: 'inactive',
-      phase: 0,
-      phaseLabel: 'Standby'
-    });
-    addLogEntry('warning', `Intervention: ${reason}`);
-    onShowToast(`Intervention logged: ${reason}`);
-  };
-
-  const handleToggleLCS = (idx) => {
-    const newLCS = [...loc.lcs];
-    newLCS[idx] = { ...newLCS[idx], open: !newLCS[idx].open };
-    onUpdateLoc(loc.id, { lcs: newLCS });
-    addLogEntry('operation', `Toggled LCS ${newLCS[idx].km} to ${newLCS[idx].open ? 'OPEN' : 'CLOSED'}`);
-    onShowToast(`LCS ${newLCS[idx].km} set to ${newLCS[idx].open ? 'OPEN' : 'CLOSED'}`);
-  };
-
-  const handleMatchLCS = () => {
-    const shouldOpen = loc.status === 'active';
-    const newLCS = loc.lcs.map(item => ({ ...item, open: shouldOpen }));
-    onUpdateLoc(loc.id, { lcs: newLCS });
-    addLogEntry('operation', `Matched all LCS tiles to ${shouldOpen ? 'OPEN' : 'CLOSED'}`);
-    onShowToast(`All LCS tiles matched to lane state (${shouldOpen ? 'OPEN' : 'CLOSED'})`);
-  };
-
-  const handleToggleThreshold = () => {
-    const nextVal = !loc.thresholdArmed;
-    onUpdateLoc(loc.id, { thresholdArmed: nextVal });
-    addLogEntry('operation', `Traffic threshold monitor ${nextVal ? 'ARMED' : 'DISARMED'}`);
-    onShowToast(`Threshold monitor ${nextVal ? 'ARMED' : 'DISARMED'}`);
-  };
-
-  const handleSetMode = (mode) => {
-    onUpdateLoc(loc.id, { mode });
-    addLogEntry('operation', `Mode changed to ${mode.toUpperCase()}`);
-    onShowToast(`Mode set to ${mode.toUpperCase()}`);
-  };
-
-  const handleExtend = (delta) => {
-    const next = Math.max(0, extendMin + delta);
-    setExtendMin(next);
-    onShowToast(`Operation extended by +${next} min`);
-  };
-
-  const filteredLogs = logState.filter(l => {
-    if (logFilter === 'all') return true;
-    return l.sev === logFilter;
-  });
-
+  const isActive = !operation?.intervention && [2, 3].includes(operation?.phase);
   const isOverviewOrCorridor = activeTab === 'overview' || activeTab === 'corridor';
 
   return (
@@ -284,50 +113,52 @@ export default function LocationScreen({
 
           <div className="tabbar">
             <button
-              className={`tab-btn ${activeTab === 'overview' || activeTab === 'corridor' ? 'active' : ''}`}
+              hidden={!allowed('overview')} className={`tab-btn ${activeTab === 'overview' || activeTab === 'corridor' ? 'active' : ''}`}
               onClick={() => setActiveTab('overview')}
             >
               Overview
             </button>
             <button
-              className={`tab-btn ${activeTab === 'schedule' ? 'active' : ''}`}
+              hidden={!allowed('schedule')} className={`tab-btn ${activeTab === 'schedule' ? 'active' : ''}`}
               onClick={() => setActiveTab('schedule')}
             >
               Schedule
             </button>
+            <button hidden={!allowed('exceptions')} className={`tab-btn ${activeTab === 'exceptions' ? 'active' : ''}`} onClick={() => setActiveTab('exceptions')}>Holidays &amp; Exceptions</button>
             <button
-              className={`tab-btn ${activeTab === 'log' ? 'active' : ''}`}
+              hidden={!allowed('log')} className={`tab-btn ${activeTab === 'log' ? 'active' : ''}`}
               onClick={() => setActiveTab('log')}
             >
-              Alarms &amp; Log
-              {loc.alarms?.length > 0 && <span className="badge">{loc.alarms.length}</span>}
+              Alarms &amp; Audit
+              {currentEquipmentAlarms.length > 0 && <span className="badge">{currentEquipmentAlarms.length}</span>}
             </button>
+<button hidden={!allowed('groups')} className={`tab-btn ${activeTab === 'groups' ? 'active' : ''}`} onClick={() => setActiveTab('groups')}>Equipment Groups</button><button hidden={!allowed('users')} className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>User Management</button><button hidden={!allowed('equipment')} className={`tab-btn ${activeTab === 'equipment' ? 'active' : ''}`} onClick={() => setActiveTab('equipment')}>Equipment Status</button>
             <button
-              className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
+              hidden={!allowed('reports')} className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
               onClick={() => setActiveTab('reports')}
             >
               Reports
             </button>
             <button
-              className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
+              hidden={!allowed('settings')} className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
               onClick={() => setActiveTab('settings')}
             >
-              Settings
+              Equipment Configuration
             </button>
             <button
-              className={`tab-btn ${activeTab === 'designer' ? 'active' : ''}`}
+              hidden={!allowed('designer')} className={`tab-btn ${activeTab === 'designer' ? 'active' : ''}`}
               onClick={() => setActiveTab('designer')}
             >
               Road Studio
             </button>
             <button
-              className={`tab-btn ${activeTab === 'vms' ? 'active' : ''}`}
+              hidden={!allowed('vms')} className={`tab-btn ${activeTab === 'vms' ? 'active' : ''}`}
               onClick={() => setActiveTab('vms')}
             >
               VMS Editor
             </button>
             <button
-              className={`tab-btn ${activeTab === 'map' ? 'active' : ''}`}
+              hidden={!allowed('map')} className={`tab-btn ${activeTab === 'map' ? 'active' : ''}`}
               onClick={() => setActiveTab('map')}
             >
               GIS Map
@@ -336,165 +167,19 @@ export default function LocationScreen({
         </>
       )}
 
-      <div className="tab-panels">
+      <div className="tab-panels">{!caps.operate && <p className="equipment-notice">Read-only operation status: {loc.phaseLabel} · {operation?.mode} · {operation?.intervention ? 'Intervention active' : operation?.pendingDecision ? 'Awaiting operator decision' : operation?.command.status}. Controls are unavailable for this demo persona.</p>}{caps.operate && !['schedule', 'exceptions', 'settings', 'groups', 'users'].includes(activeTab) && <OperationControls key={loc.id} loc={loc} op={operation} now={operationNow} dispatch={onOperation} />}
         {/* OVERVIEW / CORRIDOR TAB */}
         {isOverviewOrCorridor && (
           <div className="tab-panel active">
-            {/* Prompt Banner if Pending */}
-            {isPending && (
-              <div className="prompt-banner">
-                <div>
-                  <div className="pt1">⚠ Congestion threshold reached</div>
-                  <div className="pt2">{loc.phaseLabel || 'Congestion threshold exceeded'} — system recommends activating Smart Lane now.</div>
-                </div>
-                <div className="prompt-actions">
-                  <button className="accept" onClick={handleStartPhase1}>Accept &amp; Activate</button>
-                  <button className="dismiss" onClick={handleDismissPrompt}>Dismiss</button>
-                </div>
-              </div>
-            )}
-
-            {/* 1. HERO BAND */}
-            <div className={`hero-band ${loc.status}`}>
-              <div className="hero-left">
-                <div className="hero-status">
-                  <div className="big-dot"></div>
-                  <div className="hero-status-text">
-                    {loc.phase === 1 ? 'PRE-ACTIVATION WARNING' :
-                      loc.phase === 2 ? 'SMART LANE ACTIVE' :
-                        loc.phase === 3 ? 'PRE-DEACTIVATION WARNING' :
-                          loc.phase === 4 ? 'SMART LANE CLOSED' :
-                            loc.phase === 5 ? 'POST-ACTIVATION REPORT' :
-                              loc.status === 'pending' ? 'PENDING DECISION' : 'SMART LANE INACTIVE'}
-                    <small>
-                      {loc.phase === 1 ? 'Pre-Activation Warning Cycle' :
-                        loc.phase === 2 ? 'Emergency Lane OPEN — LCS Green ↓' :
-                          loc.phase === 3 ? 'Pre-Deactivation Closure Warning' :
-                            loc.phase === 4 ? 'Deactivated — LCS Red X ✕' :
-                              loc.phase === 5 ? 'Post-Activation Summary' :
-                                `Mode: ${(loc.mode || 'scheduled').charAt(0).toUpperCase() + (loc.mode || 'scheduled').slice(1)}`}
-                    </small>
-                  </div>
-                </div>
-
-                <div className="hero-facts">
-                  <div className="hfact">
-                    <div className="lbl">Elapsed</div>
-                    <div className="val">{isActive ? fmtElapsed(loc.elapsedSeconds || 0) : '—'}</div>
-                  </div>
-                  <div className="hfact">
-                    <div className="lbl">Planned start</div>
-                    <div className="val">{loc.ps || '—'}</div>
-                  </div>
-                  <div className="hfact">
-                    <div className="lbl">Planned end</div>
-                    <div className="val">{loc.pe || '—'}</div>
-                  </div>
-                  <div className="hfact">
-                    <div className="lbl">Level of service</div>
-                    <div className="val">{loc.los || 'A'}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="hero-controls" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                {(loc.phase === 0 || !loc.phase) && (
-                  <button className="primary-toggle to-activate" onClick={handleStartPhase1}>
-                    Activate Smart Lane
-                  </button>
-                )}
-
-                {loc.phase === 1 && (
-                  <button className="primary-toggle to-activate" onClick={handleStartPhase2Now}>
-                    Open Emergency Lane
-                  </button>
-                )}
-
-                {loc.phase === 2 && (
-                  <button className="primary-toggle to-deactivate" onClick={handleStartPhase3Deactivation}>
-                    Deactivate Smart Lane
-                  </button>
-                )}
-
-                {loc.phase === 3 && (
-                  <button className="primary-toggle to-deactivate" onClick={handleDeactivatePhase4And5}>
-                    Confirm Close Lane
-                  </button>
-                )}
-
-                {(loc.phase === 4 || loc.phase === 5) && (
-                  <button className="primary-toggle to-activate" onClick={handleStartPhase5Report}>
-                    View Operation Report
-                  </button>
-                )}
-
-                <div style={{ position: 'relative' }}>
-                  <button
-                    className="mini-btn warn-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowPausePopover(!showPausePopover);
-                    }}
-                  >
-                    Pause / Manual
-                  </button>
-                  {showPausePopover && (
-                    <div className="popover show" style={{ top: '110%', right: 0 }}>
-                      <div className="ptitle">Reason for intervention</div>
-                      <button onClick={() => handlePauseReason('Breakdown / accident — obstructing lane')}>
-                        Breakdown/accident — obstructing
-                      </button>
-                      <button onClick={() => handlePauseReason('Breakdown / accident — not obstructing lane')}>
-                        Breakdown/accident — not obstructing
-                      </button>
-                      <button onClick={() => handlePauseReason('Vehicle towed — resuming operation')}>
-                        Vehicle towed — resuming
-                      </button>
-                      <button className="cancel" onClick={() => setShowPausePopover(false)}>
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="extend-group">
-                  <button className="sq-btn" onClick={() => handleExtend(-15)}>−</button>
-                  <div className="extend-val">+{extendMin} min</div>
-                  <button className="sq-btn" onClick={() => handleExtend(15)}>+</button>
-                </div>
-
-                <div className="switch-group">
-                  <span className="lbl">Threshold</span>
-                  <div
-                    className={`switch ${loc.thresholdArmed ? 'on' : ''}`}
-                    onClick={handleToggleThreshold}
-                  >
-                    <div className="knob"></div>
-                  </div>
-                </div>
-
-                <div className="mode-row">
-                  {['manual', 'scheduled', 'automated'].map((m) => (
-                    <div
-                      key={m}
-                      className={`mode-chip ${(loc.mode || 'scheduled') === m ? 'on' : ''}`}
-                      onClick={() => handleSetMode(m)}
-                    >
-                      {m.charAt(0).toUpperCase() + m.slice(1)}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
+            <EquipmentSummary records={devices} onOpen={() => setActiveTab('equipment')} />
             {/* 2. LIVE ROUTE TIMELINE (SIGNATURE HIGHWAY TRACK) */}
             <div className="route-card">
               <div className="route-head">
                 <div className="route-title">
                   Live Route Timeline<span className="sub"> — {loc.direction || 'Northbound'}</span>
                 </div>
-                <button className="match-btn" onClick={handleMatchLCS}>
-                  Match LCS to lane state
+                <button className="match-btn" disabled={!caps.operate || !!operation?.intervention} onClick={() => onOperation({ type: 'MATCH_LCS', locationId: loc.id })}>
+                  Simulate Match LCS to lane state
                 </button>
               </div>
 
@@ -505,44 +190,14 @@ export default function LocationScreen({
                 </div>
 
                 <div className="stems">
-                  {(loc.gantries || [
-                    { km: 'KM1.95NB', type: 'CCTV', status: 'ok' },
-                    { km: 'ET1.72@STA', type: 'CCTV', status: 'ok' },
-                    { km: 'STA I/C', type: 'CCTV', status: 'ok' },
-                    { km: 'KM4.5SB', type: 'CCTV', status: 'ok' },
-                    { km: 'KM5.9NB', type: 'CCTV', status: 'ok' },
-                    { km: 'KM7.0NB', type: 'CCTV', status: 'ok' },
-                    { km: 'KM8.2NB', type: 'CCTV', status: 'off' }
-                  ]).map((g, i) => {
-                    const lcsItem = (loc.lcs || [])[i];
-                    const trafficItem = (loc.traffic || [])[i];
-                    const isOff = g.status === 'off';
-
-                    return (
-                      <div key={i} className="stem">
-                        <div className={`stem-icon ${isOff ? 'off' : 'ok'}`}>
-                          {isOff ? '✕' : '◉'}
-                        </div>
-                        <div className="stem-km">{g.km}</div>
-                        {lcsItem && (
-                          <div
-                            className={`stem-lcs ${lcsItem.open ? 'open' : 'closed'}`}
-                            onClick={() => handleToggleLCS(i)}
-                            title="Click to toggle LCS sign"
-                          >
-                            {lcsItem.open ? '↑ OPEN' : '✕ SHUT'}
-                          </div>
-                        )}
-                        {trafficItem && (
-                          <div className="stem-traffic">
-                            <span><b>{trafficItem.spd}</b>kmh</span>
-                            <span><b>{trafficItem.vol}</b>v</span>
-                            <span><b>{trafficItem.occ}%</b></span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {devices.filter(d => d.type !== 'LCS I/O Module').map(d => <div key={d.id} className="stem equipment-stem">
+                    <button type="button" onClick={() => setSelectedDeviceId(d.id)} aria-label={`View ${d.name}`}><EquipmentStatusBadge device={d} /></button>
+                    <div className="stem-km">{d.type} · {d.km}</div>
+                    <EquipmentStatusBadge device={d} field="connectivity" />
+                    {isStale(d) && <span className="equipment-stale-label">Stale observation</span>}
+                    {d.type === 'LCS' && <span className="stem-lcs">{d.indication} · simulation only</span>}
+                    {d.type === 'AVDS' && <div className="stem-traffic">{d.speed} km/h · {d.volume} veh/5 min · {d.occupancy}%</div>}
+                  </div>)}
                 </div>
               </div>
 
@@ -555,14 +210,14 @@ export default function LocationScreen({
             <div className="ov-bottom">
               {/* LEFT: 4 Small Live Cameras in 2x2 Grid with Click-to-Enlarge Modal */}
               <div className="cam-card">
-                <div className="card-title">Live Cameras</div>
+                <div className="card-title">Cameras · simulated previews</div>
                 <div className="cam-grid cam-grid-4">
-                  {(loc.cctv || ['KM1.95NB', 'ET1.72@STA', 'STA I/C', 'KM4.5SB']).slice(0, 4).map((cam, idx) => (
-                    <div
-                      key={idx}
+                  {cameras.slice(0, 4).map(cam => (
+                    <button type="button"
+                      key={cam.id}
                       className="cam-tile clickable-cam-tile"
-                      onClick={() => setSelectedCctv({ km: cam, status: 'ok', type: 'CCTV' })}
-                      title={`Click to enlarge ${cam} feed`}
+                      onClick={() => setSelectedDeviceId(cam.id)}
+                      title={`View ${cam.name} details and simulated preview`}
                     >
                       <svg viewBox="0 0 100 60" preserveAspectRatio="none">
                         <polygon points="40,60 60,60 54,0 46,0" fill="#3b4a70" />
@@ -570,10 +225,12 @@ export default function LocationScreen({
                       </svg>
                       <div className="cam-hover-zoom-hint">🔍 Enlarge</div>
                       <div className="cam-label">
-                        <span>{cam}</span>
-                        <span className="rec-dot"></span>
+                        <span>{cam.km}</span>
+                        <EquipmentStatusBadge device={cam} />
+                        <EquipmentStatusBadge device={cam} field="connectivity" />
+                        {isStale(cam) && <span className="equipment-stale-label">Stale observation</span>}
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -586,7 +243,7 @@ export default function LocationScreen({
                     <span>VMS &amp; Mini VMS Messages</span>
                     <button
                       className="mini-edit-btn"
-                      onClick={() => handleOpenVmsEditor('vms')}
+                      disabled={!caps.vmsRead} onClick={() => handleOpenVmsEditor('vms')}
                       title="Edit VMS Message Templates"
                     >
                       ✏️ Edit
@@ -601,10 +258,10 @@ export default function LocationScreen({
                         { id: 'vms-entry', type: 'Entry VMS', km: 'KM3.5NB', position: 'Entry', msg: 'SMARTLANE BERMULA', msg2: 'MULA GUNAKAN LORONG KECEMASAN' },
                         { id: 'vms-exit', type: 'Exit VMS', km: 'KM8.6NB', position: 'Exit', msg: 'SMARTLANE TAMAT', msg2: 'MASUK KEMBALI KE LORONG UTAMA' }
                       ]).map((b, idx) => {
-                        const dynamicMsg = getDynamicVmsMessage(b, loc.phase || 0);
+                        const dynamicMsg = getDynamicVmsMessage(b, operation?.intervention ? -1 : loc.phase || 0);
                         const displayText = dynamicMsg.msg2 ? `${dynamicMsg.msg} — ${dynamicMsg.msg2}` : dynamicMsg.msg;
                         return (
-                          <div key={idx} className="vms-msg-row main-vms-row" onClick={() => handleOpenVmsEditor('vms')} title="Click to edit Entry/Exit VMS">
+                          <div key={idx} className="vms-msg-row main-vms-row" disabled={!caps.vmsRead} onClick={() => handleOpenVmsEditor('vms')} title="Click to edit Entry/Exit VMS">
                             <span className="vms-type-tag">{b.type || (b.position === 'Entry' ? 'Entry VMS' : 'Exit VMS')}</span>
                             <span className="vms-msg">{displayText}</span>
                             <span className="vms-km">{b.km}</span>
@@ -620,10 +277,10 @@ export default function LocationScreen({
                         { id: 'mvms-1', type: 'Mini VMS', km: 'KM4.91NB', position: 'Intermediate', msg: 'HATI-HATI', msg2: 'KETIKA MEMANDU' },
                         { id: 'mvms-2', type: 'Mini VMS', km: 'KM6.0NB', position: 'Intermediate', msg: 'JALUR KECEMASAN', msg2: 'DIBUKA SEMENTARA' }
                       ]).map((b, idx) => {
-                        const dynamicMsg = getDynamicVmsMessage(b, loc.phase || 0);
+                        const dynamicMsg = getDynamicVmsMessage(b, operation?.intervention ? -1 : loc.phase || 0);
                         const displayText = dynamicMsg.msg2 ? `${dynamicMsg.msg} — ${dynamicMsg.msg2}` : dynamicMsg.msg;
                         return (
-                          <div key={idx} className="vms-msg-row mini-vms-row" onClick={() => handleOpenVmsEditor('miniVms')} title="Click to edit Mini VMS">
+                          <div key={idx} className="vms-msg-row mini-vms-row" disabled={!caps.vmsRead} onClick={() => handleOpenVmsEditor('miniVms')} title="Click to edit Mini VMS">
                             <span className="vms-type-tag mini">Mini VMS</span>
                             <span className="vms-msg">{displayText}</span>
                             <span className="vms-km">{b.km}</span>
@@ -647,8 +304,8 @@ export default function LocationScreen({
 
                     <div className="status-item">
                       <span className="lbl">Active alarms</span>
-                      <span className={`tag ${(loc.alarms || []).length === 0 ? 'good' : 'bad'}`}>
-                        {(loc.alarms || []).length}
+                      <span className={`tag ${currentEquipmentAlarms.length === 0 ? 'good' : 'bad'}`}>
+                        {currentEquipmentAlarms.length}
                       </span>
                     </div>
 
@@ -741,7 +398,6 @@ export default function LocationScreen({
               initialLoc={loc}
               onSaveLayout={(updatedLoc) => {
                 onUpdateLoc(loc.id, updatedLoc);
-                addLogEntry('operation', `Road path and equipment layout re-configured for ${updatedLoc.name}`);
               }}
               onShowToast={onShowToast}
             />
@@ -749,19 +405,22 @@ export default function LocationScreen({
         )}
 
         {/* SCHEDULE TAB */}
-        {activeTab === 'schedule' && (
-          <Schedule loc={loc} onShowToast={onShowToast} />
+        {['schedule', 'exceptions'].includes(activeTab) && (
+          <Schedule key={`${loc.id}:${activeTab}`} loc={loc} locations={locations} store={scheduleStore} now={operationNow} dispatch={onOperation} operations={operations} kind={activeTab === 'exceptions' ? 'exceptions' : 'schedules'} />
         )}
 
         {/* LOG TAB */}
+        {activeTab === 'equipment' && <EquipmentMonitoring key={loc.id} locationId={loc.id} records={equipmentRecords} locations={locations} />}
         {activeTab === 'log' && (
-          <div className="tab-panel active">
+          <div className="tab-panel active equipment-log-page">
+            <EquipmentAlarms records={devices} onDetails={setSelectedDeviceId} />
+            <h2>Historical audit records</h2>
             <AuditLogDisplay
-              auditLogs={auditLogs}
+              auditLogs={auditLogs.filter(log => log.locationId ? log.locationId === loc.id : log.location === loc.name || log.module === 'Administration')}
               locations={locations}
               user={user}
               onShowToast={onShowToast}
-              currentLocationFilter={loc.name}
+              currentLocationFilter={'all'}
             />
           </div>
         )}
@@ -830,71 +489,7 @@ export default function LocationScreen({
         )}
 
         {/* SETTINGS TAB */}
-        {activeTab === 'settings' && (
-          <div className="tab-panel active">
-            <div className="settings-grid">
-              <div className="panel" style={{ minHeight: 0 }}>
-                <div className="panel-title">
-                  Equipment Configuration —{' '}
-                  <span style={{ textTransform: 'none', letterSpacing: 0, color: 'var(--text-dim)' }}>
-                    {loc.name}
-                  </span>
-                </div>
-                <div className="eq-table">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Equipment ID</th>
-                        <th>Type</th>
-                        <th>Location (KM)</th>
-                        <th>IP Address</th>
-                        <th>Status</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loc.gantries.map((g, idx) => (
-                        <tr key={idx}>
-                          <td className="mono">EQ-{loc.id.toUpperCase()}-0{idx + 1}</td>
-                          <td>{g.type}</td>
-                          <td className="mono">{g.km}</td>
-                          <td className="mono">10.180.4.{10 + idx}</td>
-                          <td>
-                            <span className={`pill-status ${g.status === 'ok' ? 'good' : 'bad'}`}>
-                              {g.status === 'ok' ? 'ONLINE (24/7 REC)' : 'HARDWARE FAULT'}
-                            </span>
-                          </td>
-                          <td>
-                            {g.type === 'CCTV' ? (
-                              <button
-                                className="mini-btn good-btn"
-                                style={{ padding: '2px 8px', fontSize: '11px' }}
-                                onClick={() => setSelectedCctv(g)}
-                              >
-                                📹 Stream Feed
-                              </button>
-                            ) : (
-                              <a
-                                href="#"
-                                className="edit-link"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  onShowToast(`Configure EQ-${loc.id.toUpperCase()}-0${idx + 1}`);
-                                }}
-                              >
-                                Configure
-                              </a>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {['settings', 'groups', 'users'].includes(activeTab) && caps.configure && <Administration key={`${loc.id}:${activeTab}`} kind={activeTab} loc={loc} locations={administrationLocations} devices={equipmentRecords} state={administration} dispatch={onAdmin} />}
       </div>
 
       {/* VMS & MINI VMS MESSAGE TEMPLATE EDITOR MODAL */}
@@ -908,94 +503,8 @@ export default function LocationScreen({
         onShowToast={onShowToast}
       />
 
-      {/* CCTV LIVE STREAM & INSPECTION MODAL */}
-      {selectedCctv && (
-        <CctvModal
-          cctv={selectedCctv}
-          locName={loc.name}
-          onClose={() => setSelectedCctv(null)}
-          onLogAudit={addLogEntry}
-          onShowToast={onShowToast}
-        />
-      )}
+      {selectedDevice && <DeviceDetails key={selectedDevice.id} device={selectedDevice} onClose={closeDevice} />}
 
-      {/* PHASE 5 OPERATIONAL SUMMARY REPORT MODAL */}
-      {showPhaseReportModal && (
-        <div className="modal-overlay show" onClick={() => setShowPhaseReportModal(false)}>
-          <div className="modal-content phase-report-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>📊 Phase 5 Operational Summary Report</h2>
-              <button className="close-btn" onClick={() => setShowPhaseReportModal(false)}>✕</button>
-            </div>
-
-            <div className="modal-body">
-              <div className="report-header-card">
-                <div className="report-loc-name">{loc.name}</div>
-                <div className="report-direction">Direction: <b>{loc.direction}</b></div>
-                <div className="report-status-badge phase-5">Phase 5 Complete</div>
-              </div>
-
-              <div className="report-metrics-grid">
-                <div className="metric-box">
-                  <span className="lbl">Total Active Duration</span>
-                  <span className="val">{fmtElapsed(loc.elapsedSeconds || 10800)}</span>
-                </div>
-                <div className="metric-box">
-                  <span className="lbl">Traffic Processed</span>
-                  <span className="val">14,250 veh</span>
-                </div>
-                <div className="metric-box">
-                  <span className="lbl">Avg Speed in Lane</span>
-                  <span className="val">76.8 km/h</span>
-                </div>
-                <div className="metric-box">
-                  <span className="lbl">Level of Service</span>
-                  <span className="val good">LOS {loc.los || 'A'}</span>
-                </div>
-              </div>
-
-              <div className="report-section-title">⏱️ Operational Phase Timestamps</div>
-              <div className="report-timestamps-list">
-                <div className="t-row">
-                  <span>Phase 1 (Pre-Start Warning):</span>
-                  <b>{loc.timestamps?.p1PreActivation || '14:00:00'}</b>
-                </div>
-                <div className="t-row">
-                  <span>Phase 2 (Start / Active Operation):</span>
-                  <b>{loc.timestamps?.p2Activation || '14:03:00'}</b>
-                </div>
-                <div className="t-row">
-                  <span>Phase 3 (Pre-Stop Closure Warning):</span>
-                  <b>{loc.timestamps?.p3PreDeactivation || '17:27:00'}</b>
-                </div>
-                <div className="t-row">
-                  <span>Phase 4 (Stop / LCS Red X):</span>
-                  <b>{loc.timestamps?.p4Deactivation || '17:30:00'}</b>
-                </div>
-                <div className="t-row">
-                  <span>Phase 5 (Post-Activation Report):</span>
-                  <b>{loc.timestamps?.p5PostDeactivation || time}</b>
-                </div>
-              </div>
-
-              <div className="report-section-title">📡 Connected Equipment Telemetry Audit</div>
-              <div className="report-equip-status">
-                <div className="eq-item">LCS Gantries: <b className="good">100% Operational (Synced to Red X on Close)</b></div>
-                <div className="eq-item">VMS Displays: <b className="good">100% Synced (Broadcast Phase 1-5 Messages)</b></div>
-                <div className="eq-item">CCTV Feed: <b className="good">No Emergency Obstructions Detected</b></div>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="action-btn secondary" onClick={handleResetToStandby}>Close &amp; Reset to Standby</button>
-              <button className="action-btn primary" onClick={() => {
-                onShowToast('Phase 5 Operational Report exported to PDF');
-                handleResetToStandby();
-              }}>🖨️ Export PDF &amp; Reset</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

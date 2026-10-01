@@ -1,9 +1,16 @@
 import React from 'react';
 import Topbar from './Topbar';
 import { fmtElapsed } from '../data';
+import { equipmentAlarms } from '../equipment';
+import { canDeactivate } from '../operations';
+import { capabilities } from '../access';
+import { useAccess } from '../accessContext';
 
 export default function OverviewScreen({
   locations = [],
+  equipmentRecords = [],
+  operationNow,
+  onQuickOperation,
   onSelectLocation,
   setActiveLocId,
   onNavigateTab,
@@ -12,16 +19,11 @@ export default function OverviewScreen({
   user,
   onLogout
 }) {
-  const activeCount = locations.filter(l => l.status === 'active').length;
+  const { persona } = useAccess();
+  const activeCount = locations.filter(l => !l.operation?.intervention && [2, 3].includes(l.phase)).length;
   const pendingCount = locations.filter(l => l.status === 'pending').length;
-  const totalAlarms = locations.reduce((sum, l) => sum + (l.alarms ? l.alarms.length : 0), 0);
-
-  const allAlarms = [];
-  locations.forEach(l => {
-    (l.alarms || []).forEach(a => {
-      allAlarms.push({ ...a, loc: l.name, locId: l.id });
-    });
-  });
+  const allAlarms = equipmentAlarms(equipmentRecords).map(a => ({ ...a, sev: a.severity === 'Major' ? 'critical' : 'warning', title: `${a.device} — ${a.issue}`, loc: a.location, locId: a.locationId, time: new Date(a.raisedAt).toLocaleTimeString() }));
+  const totalAlarms = allAlarms.length;
 
   const handleOpenCorridor = (locId) => {
     if (setActiveLocId) setActiveLocId(locId);
@@ -44,6 +46,7 @@ export default function OverviewScreen({
           <div>
             <div className="ov-title">All Smartlane Locations</div>
             <div className="ov-sub">Select a location to open its live dashboard and controls</div>
+            <label>Open location<select aria-label="Open a Smartlane location" value="" onChange={e => handleOpenCorridor(e.target.value)}><option value="" disabled>Select location</option>{locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
           </div>
         </div>
 
@@ -103,8 +106,8 @@ export default function OverviewScreen({
       {/* ── 4. LOCATIONS LIST ──────────────────────────────────────── */}
       <div className="loc-list">
         {locations.map((loc) => {
-          const alarmCount = loc.alarms ? loc.alarms.length : 0;
-          const isActive = loc.status === 'active';
+          const alarmCount = allAlarms.filter(a => a.locationId === loc.id).length;
+          const isActive = !loc.operation?.intervention && [2, 3].includes(loc.phase);
           const isPending = loc.status === 'pending';
 
           return (
@@ -123,7 +126,7 @@ export default function OverviewScreen({
                   {[26, 66, 106, 146, 186].map(x => (
                     <circle
                       key={x}
-                      className={`marker ${(isActive || isPending) ? 'on' : ''}`}
+                      className={`marker ${isActive ? 'on' : ''}`}
                       cx={x}
                       cy="17"
                       r="3.5"
@@ -164,10 +167,19 @@ export default function OverviewScreen({
                     ? 'ATTENTION'
                     : 'INACTIVE'}
                 </div>
+                <small>{loc.phaseLabel} · {loc.operation?.mode} · Simulation</small>
+                {loc.operation?.intervention && <small>Intervention — policy awaiting approval</small>}
+                {loc.operation?.pendingDecision && <small>Awaiting {loc.operation.pendingDecision.kind} acknowledgement</small>}
+                <small className="schedule-overview">Next effective schedule: {loc.nextRun}</small>
+                {loc.scheduleSummary?.affected && <small className="schedule-overview">{loc.scheduleSummary.affected.outcome}: {loc.scheduleSummary.affected.name} · {loc.scheduleSummary.affected.date}</small>}
               </div>
 
               {/* Action Column */}
               <div className="loc-row-action">
+                <div className="quick-operation">
+                  <button disabled={!capabilities(persona, loc.id).operate || !loc.operation || ![0, 5].includes(loc.operation.phase) || !!loc.operation.pendingDecision} aria-label={`Request activation for ${loc.name}`} onClick={e => { e.stopPropagation(); onQuickOperation(loc.id, 'Activate'); }}>Request activation</button>
+                  <button disabled={!capabilities(persona, loc.id).operate || !loc.operation || !canDeactivate(loc.operation, operationNow) || !!loc.operation.pendingDecision} aria-label={`Request deactivation for ${loc.name}`} onClick={e => { e.stopPropagation(); onQuickOperation(loc.id, 'Deactivate'); }}>Request deactivation</button>
+                </div>
                 <div className={`alarm-text ${alarmCount > 0 ? 'has-alarm' : 'no-alarm'}`}>
                   <b>{alarmCount}</b> {alarmCount === 1 ? 'alarm' : 'alarms'}
                 </div>

@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import EquipmentStatusBadge from './EquipmentStatusBadge';
+import { buildEquipment, deviceId, isStale } from '../equipment';
+import { PHASE_NAMES } from '../operationPolicy';
+import { useAccess } from '../accessContext';
 
 export const DEFAULT_ROLE_TEMPLATES = {
   entry: {
@@ -31,6 +35,7 @@ export const DEFAULT_ROLE_TEMPLATES = {
 export function getDynamicVmsMessage(sign, phase = 0) {
   if (!sign) return { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' };
   const pNum = Number(phase) || 0;
+  if (pNum === -1) return { msg: 'INTERVENTION ACTIVE', msg2: 'VMS POLICY AWAITING APPROVAL' };
 
   if (sign.phaseTemplates && sign.phaseTemplates[pNum]) {
     return sign.phaseTemplates[pNum];
@@ -81,6 +86,7 @@ export function VmsEditorSection({
   onUpdateLoc,
   onShowToast
 }) {
+  const { caps } = useAccess();
   const [moduleType, setModuleType] = useState('vms'); // 'vms' | 'miniVms'
   const [selectedScope, setSelectedScope] = useState('group'); // 'individual' | 'group' | 'all-locations'
   const [selectedSignId, setSelectedSignId] = useState(() => {
@@ -235,11 +241,13 @@ export function VmsEditorSection({
   };
 
   const signsList = moduleType === 'vms' ? (loc?.vms || []) : (loc?.miniVms || []);
+  const monitoredSigns = loc ? buildEquipment([loc]) : [];
   const activeIndivSign = signsList.find(s => s.id === selectedSignId) || signsList[0];
 
   return (
     <div className="tab-panel active">
-      <div className="vms-section-grid">
+      {!caps.vmsEdit && <p className="equipment-notice">Read-only VMS template preview for this demo persona. Equipment configuration is a System Administrator capability.</p>}
+      <fieldset disabled={!caps.vmsEdit} className="access-readonly"><div className="vms-section-grid">
         {/* LEFT COLUMN: CONTROLS & POSITION-AWARE TEMPLATE FORMS */}
         <div className="panel" style={{ minHeight: 0 }}>
           <div className="panel-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -318,15 +326,9 @@ export function VmsEditorSection({
 
           {/* 3. OPERATIONAL PHASE STEPPER */}
           <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label>Select Operational Phase (Phases 1–5)</label>
+            <label>Edit draft template for phase — this does not change the operation</label>
             <div className="phase-stepper-bar">
-              {[
-                { p: 1, label: 'P1: Pre-Activation' },
-                { p: 2, label: 'P2: Active Run' },
-                { p: 3, label: 'P3: Pre-Deactivation' },
-                { p: 4, label: 'P4: Inspection' },
-                { p: 5, label: 'P5: Standby / Closed' }
-              ].map(phaseObj => (
+              {PHASE_NAMES.slice(1).map((label, index) => ({ p: index + 1, label })).map(phaseObj => (
                 <button
                   key={phaseObj.p}
                   type="button"
@@ -518,14 +520,14 @@ export function VmsEditorSection({
           {/* ACTION BUTTON */}
           <div style={{ marginTop: '20px' }}>
             <button className="gen-btn" style={{ margin: 0, width: '100%' }} onClick={handleSave}>
-              ⚡ Save &amp; Broadcast Position-Aware Template
+              ⚡ Save mock phase template
             </button>
           </div>
         </div>
 
         {/* RIGHT COLUMN: LIVE LED PREVIEWS & HARDWARE MATRIX */}
         <div className="panel" style={{ minHeight: 0 }}>
-          <div className="panel-title">Live LED Sign Board Matrix Preview</div>
+          <div className="panel-title">Draft phase template preview — no equipment confirmation</div>
 
           {selectedScope === 'individual' ? (
             /* SINGLE SIGN PREVIEW */
@@ -598,7 +600,8 @@ export function VmsEditorSection({
 
           <div className="vms-boards-list-grid">
             {signsList.map(s => {
-              const activePhaseNum = loc?.phase || 0;
+              const monitored = monitoredSigns.find(d => d.id === deviceId(loc.id, moduleType === 'vms' ? 'VMS' : 'Mini VMS', s));
+              const activePhaseNum = loc?.operation?.intervention ? -1 : loc?.phase || 0;
               const dMsg = getDynamicVmsMessage(s, activePhaseNum);
               const displayMsg1 = dMsg.msg;
               const displayMsg2 = dMsg.msg2;
@@ -614,7 +617,9 @@ export function VmsEditorSection({
                     <div className="t2">{displayMsg2}</div>
                   </div>
                   <div className="hw-foot">
-                    <span className="status-dot-good">● {s.status || 'Good'}</span>
+                    <EquipmentStatusBadge device={monitored || s} />
+                    <EquipmentStatusBadge device={monitored || s} field="connectivity" />
+                    {monitored && isStale(monitored) && <span className="equipment-stale-label">Stale observation</span>}
                     <span className="mono-ip">10.180.4.{15 + (s.id ? s.id.length : 1)}</span>
                   </div>
                 </div>
@@ -622,7 +627,7 @@ export function VmsEditorSection({
             })}
           </div>
         </div>
-      </div>
+      </div></fieldset>
     </div>
   );
 }

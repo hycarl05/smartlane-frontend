@@ -19,6 +19,8 @@ export default function AuditLogDisplay({
   useEffect(() => {
     if (currentLocationFilter) {
       setLocationFilter(currentLocationFilter);
+      setCurrentPage(1);
+      setSelectedAuditLog(null);
     }
   }, [currentLocationFilter]);
 
@@ -67,11 +69,12 @@ export default function AuditLogDisplay({
       }
 
       // Date Range Filter
-      if (dateFilter === 'today') {
-        const todayStr = '2026-08-13'; // matching system clock date string or date field
-        if (!log.timestamp.startsWith(todayStr) && log.date !== todayStr) return false;
-      } else if (dateFilter === '7days') {
-        if (!log.timestamp.startsWith('2026-08-13') && !log.timestamp.startsWith('2026-08-12')) return false;
+      if (dateFilter !== 'all') {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        if (dateFilter === '7days') start.setDate(start.getDate() - 6);
+        if (dateFilter === '30days') start.setDate(start.getDate() - 29);
+        if (Date.parse(log.timestamp) < start.getTime()) return false;
       }
 
       // Module Filter
@@ -235,7 +238,7 @@ export default function AuditLogDisplay({
                   <span className="modal-icon">🛡️</span>
                   <div>
                     <h3>Audit Record Detail — #{selectedAuditLog.id}</h3>
-                    <p>Read-Only Tamper-Proof Cryptographic Telemetry Record</p>
+                    <p>{selectedAuditLog.outcome === 'Simulated' ? 'Mock operation event — no equipment confirmation or cryptographic proof' : 'Prototype audit record'}</p>
                   </div>
                 </div>
                 <button className="close-modal-btn" onClick={() => setSelectedAuditLog(null)}>×</button>
@@ -280,12 +283,16 @@ export default function AuditLogDisplay({
                 </div>
 
                 <div className="detail-item full-width">
-                  <span className="detail-lbl">Cryptographic Security Verification</span>
+                  <span className="detail-lbl">Record provenance</span>
                   <div className="crypto-hash-box">
-                    <span className="lock-tag">🔒 IMMUTABLE READ-ONLY RECORD</span>
-                    <code>{selectedAuditLog.securityHash || 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}</code>
-                    <span className="retention-note">Mandatory Retention Active: Minimum 2-Year Database Protection</span>
-                  </div>
+                  {selectedAuditLog.outcome === 'Simulated' ? <>
+                    <p>Simulation only. Stored in this prototype session; not a tamper-proof record.</p>
+                    <p>Reference: {selectedAuditLog.reference || selectedAuditLog.operationId || 'Not started'} · Location ID: {selectedAuditLog.locationId}</p>
+                    <p>Action: {selectedAuditLog.action} · Decision: {selectedAuditLog.decision}</p>
+                    {selectedAuditLog.module === 'Administration' ? <p>{selectedAuditLog.summary}</p> : <p>Phase: {selectedAuditLog.previousPhase} → {selectedAuditLog.newPhase}</p>}
+                    <p>Reason: {selectedAuditLog.interventionReason || 'Not applicable'} · Extension: {selectedAuditLog.extensionMinutes ?? 'Not applicable'}</p>
+                  </> : <p>Legacy demonstration record. Integrity and retention have not been verified.</p>}
+                </div>
                 </div>
               </div>
 
@@ -396,7 +403,7 @@ export default function AuditLogDisplay({
         <div className="audit-badges-group">
           <div className="audit-compliance-badge badge-readonly" title="All audit records are strictly read-only and protected against alteration">
             <span className="badge-dot green"></span>
-            <b>Read-Only Design</b> • Protected & Immutable
+            <b>Prototype audit history</b> • No integrity or retention guarantee
           </div>
           <div className="audit-compliance-badge badge-retention" title="Operational audit records retained for a minimum of 2 years before archival">
             <span className="badge-icon">⏳</span>
@@ -454,7 +461,7 @@ export default function AuditLogDisplay({
           <div className="filter-group">
             <label>Result Status</label>
             <select value={resultFilter} onChange={(e) => { setResultFilter(e.target.value); setCurrentPage(1); }}>
-              <option value="all">All Results</option>
+              <option value="all">All Results</option><option value="Simulated">Simulated</option>
               <option value="success">Success</option>
               <option value="warning">Warning</option>
               <option value="fault">Fault</option>
@@ -513,7 +520,7 @@ export default function AuditLogDisplay({
               <th onClick={() => handleSort('result')} className="sortable">
                 Result {sortField === 'result' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
               </th>
-              <th>Read-Only Integrity</th>
+              <th>Record type</th>
             </tr>
           </thead>
           <tbody>
@@ -569,8 +576,8 @@ export default function AuditLogDisplay({
                       </span>
                     </td>
                     <td className="cell-hash">
-                      <span className="hash-lock" title={`Crypto Proof: ${log.securityHash || 'Verified Read-Only'}`}>
-                        🔒 Read-Only
+                      <span className="hash-lock" title="Prototype record; integrity not verified">
+                        {log.outcome === 'Simulated' ? 'Simulation' : 'Demo record'}
                       </span>
                     </td>
                   </tr>
@@ -640,7 +647,7 @@ export default function AuditLogDisplay({
                 <span className="modal-icon">🛡️</span>
                 <div>
                   <h3>Audit Record Detail — #{selectedAuditLog.id}</h3>
-                  <p>Read-Only Tamper-Proof Cryptographic Telemetry Record</p>
+                  <p>{selectedAuditLog.outcome === 'Simulated' ? 'Mock operation event — no equipment confirmation or cryptographic proof' : 'Prototype audit record'}</p>
                 </div>
               </div>
               <button className="close-modal-btn" onClick={() => setSelectedAuditLog(null)}>×</button>
@@ -685,11 +692,15 @@ export default function AuditLogDisplay({
               </div>
 
               <div className="detail-item full-width">
-                <span className="detail-lbl">Cryptographic Security Verification</span>
+                <span className="detail-lbl">Record provenance</span>
                 <div className="crypto-hash-box">
-                  <span className="lock-tag">🔒 IMMUTABLE READ-ONLY RECORD</span>
-                  <code>{selectedAuditLog.securityHash || 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}</code>
-                  <span className="retention-note">Mandatory Retention Active: Minimum 2-Year Database Protection</span>
+                  {selectedAuditLog.outcome === 'Simulated' ? <>
+                    <p>Simulation only. Stored in this prototype session; not a tamper-proof record.</p>
+                    <p>Reference: {selectedAuditLog.reference || selectedAuditLog.operationId || 'Not started'} · Location ID: {selectedAuditLog.locationId}</p>
+                    <p>Action: {selectedAuditLog.action} · Decision: {selectedAuditLog.decision}</p>
+                    {selectedAuditLog.module === 'Administration' ? <p>{selectedAuditLog.summary}</p> : <p>Phase: {selectedAuditLog.previousPhase} → {selectedAuditLog.newPhase}</p>}
+                    <p>Reason: {selectedAuditLog.interventionReason || 'Not applicable'} · Extension: {selectedAuditLog.extensionMinutes ?? 'Not applicable'}</p>
+                  </> : <p>Legacy demonstration record. Integrity and retention have not been verified.</p>}
                 </div>
               </div>
             </div>
