@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createScheduleStore, dateKey, atTime, occursOn, occurrences, nextSchedule, validateRule, changeSchedules, previewImport, CSV_HEADER, monthDates } from '../src/scheduling.js';
 import { initialOperations, operationReducer } from '../src/operations.js';
-import { DEMO_OPERATION_POLICY as POLICY } from '../src/operationPolicy.js';
 
 const now = atTime('2026-09-30', '08:00');
 const locations = [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }];
@@ -122,11 +121,9 @@ test('schedule simulation routes through Phase 2 acknowledgement, preserves timi
   dispatch(action);
   assert.equal(state.events.length, count);
   dispatch({ type: 'CONFIRM', requestId });
-  assert.equal(state.byId.a.phase, 1);
-  assert.equal(state.byId.a.warningDeadline, now + POLICY.warningMs);
-  assert.ok(state.events.some(e => e.occurrenceId === occurrenceId));
-  dispatch({ type: 'TICK', now: now + POLICY.warningMs + POLICY.transitionMs });
   assert.equal(state.byId.a.phase, 2);
+  assert.equal(state.byId.a.warningDeadline, null);
+  assert.ok(state.events.some(e => e.occurrenceId === occurrenceId));
   assert.equal(state.byId.a.plannedEnd, state.byId.a.startedAt + 30 * 60000);
 });
 

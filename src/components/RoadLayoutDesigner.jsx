@@ -1493,12 +1493,8 @@ export default function RoadLayoutDesigner({
       vms: vmsItems.length > 0 ? vmsItems : (initialLoc ? initialLoc.vms : []),
       miniVms: miniVmsItems,
       cctv: cctvList.length > 0 ? cctvList : (initialLoc ? initialLoc.cctv : []),
-      traffic: sortedEq.map((e) => ({
-        km: `KM${e.km.toFixed(1)}NB`,
-        spd: 80,
-        vol: 45,
-        occ: 15
-      })),
+      // Road Studio geometry never manufactures AVDS observations.
+      traffic: initialLoc ? initialLoc.traffic : [],
       status: initialLoc ? initialLoc.status : 'inactive',
       mode: initialLoc ? initialLoc.mode : 'scheduled',
       phase: initialLoc ? initialLoc.phase : 0,

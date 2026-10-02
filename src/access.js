@@ -12,13 +12,17 @@ export function capabilities(persona, locationId) {
   return { read: available, operate: operator, schedule: operator, configure: admin,
     users: admin, vmsRead: operator, vmsEdit: admin, design: admin,
     reports: available && ['System Administrator', 'Management'].includes(persona.role),
-    audit: available && ['System Administrator', 'Management'].includes(persona.role) };
+    audit: available && ['System Administrator', 'Management'].includes(persona.role),
+    analytics: available && ['Operation', 'System Administrator', 'Management'].includes(persona.role),
+    maintenanceRead: available && ['System Administrator', 'Management'].includes(persona.role),
+    maintenanceEdit: admin, housekeeping: admin };
 }
 export function moduleAllowed(persona, module, locationId) {
   const c = capabilities(persona, locationId);
-  const required = { overview: 'read', corridor: 'read', equipment: 'read', map: 'read',
+  const required = { overview: 'read', corridor: 'read', equipment: 'read', map: 'read', schematic: 'read',
     schedule: 'schedule', exceptions: 'schedule', vms: 'vmsRead', settings: 'configure',
-    groups: 'configure', users: 'users', reports: 'reports', log: 'audit', designer: 'design' };
+    groups: 'configure', users: 'users', reports: 'reports', log: 'audit', designer: 'design',
+    analytics: 'analytics', maintenance: 'maintenanceRead', health: 'maintenanceRead', housekeeping: 'housekeeping' };
   return !!c[required[module]];
 }
 export function operationActionAllowed(persona, action, scheduleStore) {

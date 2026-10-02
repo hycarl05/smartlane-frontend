@@ -54,6 +54,7 @@ export default function MapView({
   onSelectLocation = null,
   interactive = true,
   markers = [],
+  onMapError = null,
   styleUrl = MAP_STYLES.dark.url,
   className = "",
   containerStyle = {}
@@ -61,6 +62,8 @@ export default function MapView({
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
+  const onMapErrorRef = useRef(onMapError);
+  onMapErrorRef.current = onMapError;
   const [currentStyle, setCurrentStyle] = useState("dark");
 
   useEffect(() => {
@@ -87,6 +90,7 @@ export default function MapView({
 
     map.on("error", (e) => {
       console.warn("MapLibre tile/style warning:", e && e.error ? e.error : e);
+      onMapErrorRef.current?.(e?.error?.message || 'Map style or tile request failed');
     });
 
     const triggerResize = () => {

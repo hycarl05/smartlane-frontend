@@ -7,197 +7,104 @@ import { capabilities } from '../access';
 import { useAccess } from '../accessContext';
 
 export default function OverviewScreen({
-  locations = [],
-  equipmentRecords = [],
-  operationNow,
-  onQuickOperation,
-  onSelectLocation,
-  setActiveLocId,
-  onNavigateTab,
-  time,
-  date,
-  user,
-  onLogout
+  locations = [], equipmentRecords = [], operationNow, onQuickOperation,
+  onSelectLocation, time, date, user, onLogout
 }) {
   const { persona } = useAccess();
   const activeCount = locations.filter(l => !l.operation?.intervention && [2, 3].includes(l.phase)).length;
   const pendingCount = locations.filter(l => l.status === 'pending').length;
-  const allAlarms = equipmentAlarms(equipmentRecords).map(a => ({ ...a, sev: a.severity === 'Major' ? 'critical' : 'warning', title: `${a.device} — ${a.issue}`, loc: a.location, locId: a.locationId, time: new Date(a.raisedAt).toLocaleTimeString() }));
-  const totalAlarms = allAlarms.length;
-
-  const handleOpenCorridor = (locId) => {
-    if (setActiveLocId) setActiveLocId(locId);
-    if (onSelectLocation) onSelectLocation(locId, 'overview');
-    if (onNavigateTab) onNavigateTab('corridor');
+  const alarms = equipmentAlarms(equipmentRecords).map(a => ({
+    ...a, sev: a.severity === 'Major' ? 'critical' : 'warning',
+    title: `${a.device} — ${a.issue}`, loc: a.location, locId: a.locationId,
+    time: new Date(a.raisedAt).toLocaleTimeString()
+  }));
+  const open = id => {
+    onSelectLocation?.(id, 'overview');
   };
+  const losClass = los => ['A', 'B'].includes(los) ? 'good' : ['C', 'D'].includes(los) ? 'warn' : 'crit';
 
-  const getLosClass = (los) => {
-    if (los === 'A' || los === 'B') return 'good';
-    if (los === 'C' || los === 'D') return 'warn';
-    return 'crit';
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', background: 'var(--canvas)' }}>
-      <Topbar time={time} date={date} user={user} onLogout={onLogout} />
-      <div className="ov-scroll">
-        {/* ── 1. HEADER ──────────────────────────────────────────────── */}
-        <div className="ov-head">
-          <div>
-            <div className="ov-title">All Smartlane Locations</div>
-            <div className="ov-sub">Select a location to open its live dashboard and controls</div>
-            <label>Open location<select aria-label="Open a Smartlane location" value="" onChange={e => handleOpenCorridor(e.target.value)}><option value="" disabled>Select location</option>{locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
-          </div>
+  return <div className="overview-screen">
+    <Topbar time={time} date={date} user={user} onLogout={onLogout} />
+    <main className="ov-scroll">
+      <header className="ov-head">
+        <div>
+          <h1 className="ov-title">All Smartlane Locations</h1>
+          <p className="ov-sub">Select a location to open its live dashboard and controls.</p>
         </div>
+        <label className="location-picker">
+          <span>Open location</span>
+          <select aria-label="Open a Smartlane location" value="" onChange={e => open(e.target.value)}>
+            <option value="" disabled>Select location</option>
+            {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+        </label>
+      </header>
 
-      {/* ── 2. KPI STRIP (4 TILES) ─────────────────────────────────── */}
-      <div className="kpi-strip">
-        <div className="kpi-tile">
-          <div className="kpi-icon blue">◧</div>
-          <div>
-            <div className="kpi-num">{locations.length}</div>
-            <div className="kpi-lbl">Total locations</div>
-          </div>
-        </div>
+      <section className="kpi-strip" aria-label="Location summary">
+        {[['blue', 'Locations', locations.length, '◇'], ['teal', 'Active now', activeCount, '▶'], ['amber', 'Needs attention', pendingCount, '!'], ['red', 'Open alarms', alarms.length, '⚠']].map(([tone, label, value, icon]) =>
+          <article className="kpi-tile" key={label}><span className={`kpi-icon ${tone}`} aria-hidden="true">{icon}</span><div><strong className="kpi-num">{value}</strong><span className="kpi-lbl">{label}</span></div></article>
+        )}
+      </section>
 
-        <div className="kpi-tile">
-          <div className="kpi-icon teal">▶</div>
-          <div>
-            <div className="kpi-num">{activeCount}</div>
-            <div className="kpi-lbl">Active now</div>
-          </div>
-        </div>
+      {alarms.length > 0 && <section className="alert-ticker" aria-label="Open equipment alarms">
+        {alarms.map(a => <button key={a.id} className={`ticker-chip ${a.sev === 'warning' ? 'warn' : 'crit'}`} onClick={() => open(a.locId)}><span className="dot" /><span><strong className="tt1">{a.title}</strong><small className="tt2">{a.loc} · {a.time}</small></span></button>)}
+      </section>}
 
-        <div className="kpi-tile">
-          <div className="kpi-icon amber">!</div>
-          <div>
-            <div className="kpi-num">{pendingCount}</div>
-            <div className="kpi-lbl">Needs attention</div>
-          </div>
-        </div>
-
-        <div className="kpi-tile">
-          <div className="kpi-icon red">⚠</div>
-          <div>
-            <div className="kpi-num">{totalAlarms}</div>
-            <div className="kpi-lbl">Open alarms</div>
-          </div>
-        </div>
+      <div className="overview-list-heading">
+        <h2>Locations</h2>
+        <span title="The next effective schedule search covers 366 days.">Schedule preview: 366 days</span>
       </div>
 
-      {/* ── 3. ALERT TICKER ────────────────────────────────────────── */}
-      {allAlarms.length > 0 && (
-        <div className="alert-ticker">
-          {allAlarms.map((a, idx) => (
-            <div
-              key={idx}
-              className={`ticker-chip ${a.sev === 'warning' ? 'warn' : ''}`}
-              onClick={() => handleOpenCorridor(a.locId)}
-            >
-              <div>
-                <div className="tt1">{a.title || a.msg}</div>
-                <div className="tt2">{a.loc} · {a.time || '14:31:02'}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── 4. LOCATIONS LIST ──────────────────────────────────────── */}
-      <div className="loc-list">
-        {locations.map((loc) => {
-          const alarmCount = allAlarms.filter(a => a.locationId === loc.id).length;
+      <section className="loc-list" aria-label="Smartlane locations">
+        {locations.map(loc => {
+          const alarmCount = alarms.filter(a => a.locationId === loc.id).length;
           const isActive = !loc.operation?.intervention && [2, 3].includes(loc.phase);
           const isPending = loc.status === 'pending';
-
-          return (
-            <div
-              key={loc.id}
-              className={`loc-row is-${loc.status}`}
-              onClick={() => handleOpenCorridor(loc.id)}
-            >
-              {/* ID & Mini Road Column */}
-              <div className="loc-row-id">
-                <div className="nm">{loc.name}</div>
-                <div className="dr">{loc.direction || 'NORTHBOUND'}</div>
-                <svg className="mini-road" viewBox="0 0 220 34" preserveAspectRatio="none">
-                  <line className="track" x1="6" y1="17" x2="214" y2="17" />
-                  <line className="flow" x1="6" y1="17" x2="214" y2="17" />
-                  {[26, 66, 106, 146, 186].map(x => (
-                    <circle
-                      key={x}
-                      className={`marker ${isActive ? 'on' : ''}`}
-                      cx={x}
-                      cy="17"
-                      r="3.5"
-                    />
-                  ))}
-                </svg>
-              </div>
-
-              {/* Stats Column */}
-              <div className="loc-row-stats">
-                <div className="rstat">
-                  <div className="lbl">Level of service</div>
-                  <div className={`val ${getLosClass(loc.los || 'A')}`}>
-                    {loc.los || 'A'}
-                  </div>
-                </div>
-
-                <div className="rstat">
-                  <div className="lbl">Traffic flow</div>
-                  <div className="val">{loc.trafficFlow || 'Normal'}</div>
-                </div>
-
-                <div className="rstat">
-                  <div className="lbl">{isActive ? 'Elapsed' : 'Next run'}</div>
-                  <div className="val">
-                    {isActive ? fmtElapsed(loc.elapsedSeconds || 0) : (loc.nextRun || '—')}
-                  </div>
-                </div>
-              </div>
-
-              {/* Status Pill Column */}
-              <div className="loc-row-status">
-                <div className={`status-pill ${loc.status}`}>
-                  <span className="dot"></span>
-                  {isActive
-                    ? `ACTIVE · P${loc.phase || 2}`
-                    : isPending
-                    ? 'ATTENTION'
-                    : 'INACTIVE'}
-                </div>
-                <small>{loc.phaseLabel} · {loc.operation?.mode} · Simulation</small>
-                {loc.operation?.intervention && <small>Intervention — policy awaiting approval</small>}
-                {loc.operation?.pendingDecision && <small>Awaiting {loc.operation.pendingDecision.kind} acknowledgement</small>}
-                <small className="schedule-overview">Next effective schedule: {loc.nextRun}</small>
-                {loc.scheduleSummary?.affected && <small className="schedule-overview">{loc.scheduleSummary.affected.outcome}: {loc.scheduleSummary.affected.name} · {loc.scheduleSummary.affected.date}</small>}
-              </div>
-
-              {/* Action Column */}
-              <div className="loc-row-action">
-                <div className="quick-operation">
-                  <button disabled={!capabilities(persona, loc.id).operate || !loc.operation || ![0, 5].includes(loc.operation.phase) || !!loc.operation.pendingDecision} aria-label={`Request activation for ${loc.name}`} onClick={e => { e.stopPropagation(); onQuickOperation(loc.id, 'Activate'); }}>Request activation</button>
-                  <button disabled={!capabilities(persona, loc.id).operate || !loc.operation || !canDeactivate(loc.operation, operationNow) || !!loc.operation.pendingDecision} aria-label={`Request deactivation for ${loc.name}`} onClick={e => { e.stopPropagation(); onQuickOperation(loc.id, 'Deactivate'); }}>Request deactivation</button>
-                </div>
-                <div className={`alarm-text ${alarmCount > 0 ? 'has-alarm' : 'no-alarm'}`}>
-                  <b>{alarmCount}</b> {alarmCount === 1 ? 'alarm' : 'alarms'}
-                </div>
-                <button
-                  className="open-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenCorridor(loc.id);
-                  }}
-                >
-                  Open Dashboard →
-                </button>
-              </div>
+          const canOperate = capabilities(persona, loc.id).operate;
+          const nextSchedule = loc.scheduleSummary?.next ? loc.nextRun : 'No upcoming schedule';
+          return <article key={loc.id} className={`loc-row is-${loc.status}`}>
+            <div className="loc-row-id">
+              <h3 className="nm">{loc.name}</h3>
+              <p className="dr">{loc.direction || 'Northbound'}</p>
+              <svg className="mini-road" viewBox="0 0 220 34" preserveAspectRatio="none" aria-hidden="true">
+                <line className="track" x1="6" y1="17" x2="214" y2="17" />
+                <line className="flow" x1="6" y1="17" x2="214" y2="17" />
+                {[26, 66, 106, 146, 186].map(x => <circle key={x} className={`marker ${isActive ? 'on' : ''}`} cx={x} cy="17" r="3.5" />)}
+              </svg>
             </div>
-          );
+
+            <div className="loc-row-stats" aria-label="Traffic summary">
+              <div className="rstat"><span className="lbl">Level of service</span><strong className={`val ${losClass(loc.los || 'A')}`}>{loc.los || 'A'}</strong></div>
+              <div className="rstat"><span className="lbl">Traffic flow</span><strong className="val">{loc.trafficFlow || 'Normal'}</strong></div>
+              <div className="rstat"><span className="lbl">Elapsed</span><strong className="val">{isActive ? fmtElapsed(loc.elapsedSeconds || 0) : '—'}</strong></div>
+            </div>
+
+            <div className="loc-row-status">
+              <span className={`status-pill ${loc.status}`}><span className="dot" />{isActive ? `Active · Phase ${loc.phase || 2}` : isPending ? 'Needs attention' : 'Inactive'}</span>
+              <dl><div><dt>Mode</dt><dd>{loc.operation?.mode || 'Not set'}</dd></div><div><dt>Phase</dt><dd>{loc.phaseLabel}</dd></div></dl>
+              {loc.operation?.intervention && <small className="operation-alert">Intervention active · policy awaiting approval</small>}
+              {loc.operation?.pendingDecision && <small className="operation-alert">{loc.operation.pendingDecision.requiresAcknowledgement ? `Awaiting ${loc.operation.pendingDecision.kind} acknowledgement` : `${loc.operation.pendingDecision.kind} decision pending`}</small>}
+              <small className="simulation-label">Simulation</small>
+            </div>
+
+            <div className="loc-row-schedule">
+              <span className="lbl">Next effective schedule</span>
+              <strong>{nextSchedule}</strong>
+              {loc.scheduleSummary?.affected && <small>{loc.scheduleSummary.affected.outcome}: {loc.scheduleSummary.affected.name} · {loc.scheduleSummary.affected.date}</small>}
+            </div>
+
+            <div className={`alarm-text ${alarmCount ? 'has-alarm' : 'no-alarm'}`}><b>{alarmCount}</b><span>{alarmCount === 1 ? 'open alarm' : 'open alarms'}</span></div>
+
+            <div className="loc-row-action">
+              <div className="quick-operation">
+                <button className="overview-action secondary" disabled={!canOperate || !loc.operation || ![0, 5].includes(loc.operation.phase) || !!loc.operation.pendingDecision} onClick={() => onQuickOperation(loc.id, 'Activate')}>Request activation</button>
+                <button className="overview-action danger" disabled={!canOperate || !loc.operation || !canDeactivate(loc.operation, operationNow) || !!loc.operation.pendingDecision} onClick={() => onQuickOperation(loc.id, 'Deactivate')}>Request deactivation</button>
+              </div>
+              <button className="open-btn" onClick={() => open(loc.id)}>Open Dashboard →</button>
+            </div>
+          </article>;
         })}
-      </div>
-    </div>
-    </div>
-  );
+      </section>
+    </main>
+  </div>;
 }

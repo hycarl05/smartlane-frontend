@@ -1,4 +1,4 @@
-export const INITIAL_LOCATIONS = [
+const LEGACY_LOCATIONS = [
   {
     id: 'pms',
     name: "Putra Mahkota–Southville Interchange",
@@ -215,6 +215,64 @@ export const INITIAL_LOCATIONS = [
     alarms: []
   }
 ];
+
+// Demo placement inventory transcribed from PROJ-PS8K-DB-0326, printed pages 7-10.
+// Health values remain synthetic observations; placement provenance is independent.
+const PROPOSED = 'Proposed equipment - placement diagram';
+const EXISTING = 'Existing equipment - placement diagram';
+const placed = (km, inventoryClass = PROPOSED, extra = {}) => ({ km, inventoryClass, placementProvenance: 'PROJ-PS8K-DB-0326 printed pages 7-10', ...extra });
+
+const DOCUMENTED_PLACEMENTS = {
+  pms: {
+    direction: 'Northbound', routeStart: 'KM288.9NB', routeEnd: 'KM292.6NB', routeDistanceKm: 3.7,
+    equipment: { cctv: [3, 3], avds: [2, 2], lcs: [3, 3], vms: [0, 0], miniVms: [2, 2] },
+    gantries: [placed('KM289.0NB', PROPOSED, { type: 'CCTV', status: 'ok' }), placed('KM289.8NB', PROPOSED, { type: 'CCTV', status: 'ok' }), placed('KM291.4NB', PROPOSED, { type: 'CCTV', status: 'ok' })],
+    cctv: ['KM289.0NB', 'KM289.8NB', 'KM291.4NB'],
+    lcs: [placed('KM290.0NB', PROPOSED, { open: true }), placed('KM291.7NB', PROPOSED, { open: true }), placed('KM292.6NB', PROPOSED, { open: true })],
+    traffic: [placed('KM290.0NB', PROPOSED, { spd: 75, vol: 53, occ: 17 }), placed('KM291.7NB', PROPOSED, { status: 'Degraded', spd: 74, vol: 42, occ: 16 })],
+    vms: [],
+    miniVms: [placed('KM289.1NB', PROPOSED, { id: 'mvms-1', type: 'Unipole VMS', position: 'Start', status: 'Good', msg: 'SMARTLANE BERMULA', msg2: 'PATUHI ARAHAN' }), placed('KM290.5NB', PROPOSED, { id: 'mvms-2', type: 'Unipole VMS', position: 'Mid', status: 'Warning', msg: 'SMARTLANE AKTIF', msg2: 'PATUHI HAD LAJU' })],
+    excludedPrototypeInventory: {
+      reason: 'Existing placement-diagram equipment retained as provenance but excluded from the 10-device first-stage prototype scope.',
+      cctv: [placed('KM292.4NB', EXISTING, { type: 'CCTV', status: 'ok' })],
+      vms: [placed('KM292.6NB', EXISTING, { id: 'vms-existing', type: 'Existing VMS', position: 'End', status: 'Good', msg: 'SMARTLANE TAMAT', msg2: 'MASUK KEMBALI KE LORONG UTAMA' })],
+    },
+  },
+  dopg: {
+    direction: 'Southbound', routeStart: 'KM4.7SB', routeEnd: 'KM1.9SB', routeDistanceKm: 2.8,
+    routeConflict: 'Brief describes KM4.4-KM1.9; placement diagram also locates a proposed CCTV at KM4.7.',
+    equipment: { cctv: [3, 3], avds: [2, 2], lcs: [3, 3], vms: [0, 0], miniVms: [2, 2] },
+    gantries: [placed('KM4.7SB', PROPOSED, { type: 'CCTV', status: 'ok' }), placed('KM3.4SB', PROPOSED, { type: 'CCTV', status: 'ok' }), placed('KM2.0SB', PROPOSED, { type: 'CCTV', status: 'ok' })],
+    cctv: ['KM4.7SB', 'KM3.4SB', 'KM2.0SB'],
+    lcs: [placed('KM4.0SB', PROPOSED, { open: false }), placed('KM3.2SB', PROPOSED, { open: false }), placed('KM2.8SB', PROPOSED, { open: false })],
+    traffic: [placed('KM4.0SB', PROPOSED, { spd: 98, vol: 21, occ: 5 }), placed('KM2.8SB', PROPOSED, { spd: 101, vol: 19, occ: 4 })],
+    vms: [],
+    miniVms: [placed('KM4.4SB', PROPOSED, { id: 'mvms-1', type: 'Unipole VMS', position: 'Start', status: 'Good', msg: 'SMARTLANE BERMULA', msg2: 'PATUHI ARAHAN' }), placed('KM1.9SB', PROPOSED, { id: 'mvms-2', type: 'Unipole VMS', position: 'End', status: 'Good', msg: 'SMARTLANE TAMAT', msg2: 'MASUK LORONG UTAMA' })],
+  },
+  sbj: {
+    direction: 'Southbound', routeStart: 'KM162.7SB', routeEnd: 'KM159.2SB', routeDistanceKm: 3.5,
+    equipment: { cctv: [3, 3], avds: [2, 2], lcs: [3, 3], vms: [0, 0], miniVms: [2, 2] },
+    gantries: [placed('KM162.3SB', PROPOSED, { type: 'CCTV', status: 'fault' }), placed('KM160.4SB', PROPOSED, { type: 'CCTV', status: 'ok' }), placed('KM159.2SB', PROPOSED, { type: 'CCTV', status: 'ok' })],
+    cctv: ['KM162.3SB', 'KM160.4SB', 'KM159.2SB'],
+    lcs: [placed('KM162.4SB', PROPOSED, { open: false }), placed('KM160.7SB', PROPOSED, { open: false }), placed('KM159.8SB', PROPOSED, { open: false })],
+    traffic: [placed('KM162.4SB', PROPOSED, { spd: 92, vol: 28, occ: 8 }), placed('KM159.8SB', PROPOSED, { spd: 90, vol: 31, occ: 9 })],
+    vms: [],
+    miniVms: [placed('KM159.3SB', PROPOSED, { id: 'mvms-1', type: 'Unipole VMS', position: 'Start', status: 'Good', msg: 'SMARTLANE BERMULA', msg2: 'PATUHI ARAHAN' }), placed('KM162.7SB', PROPOSED, { id: 'mvms-2', type: 'Unipole VMS', position: 'End', status: 'Good', msg: 'SMARTLANE TAMAT', msg2: 'MASUK LORONG UTAMA' })],
+  },
+  bsd: {
+    direction: 'Southbound', routeStart: 'KM126.5SB', routeEnd: 'KM120.2SB', routeDistanceKm: 6.3,
+    routeConflict: 'Diagram note states existing KM120.6-KM128 and proposed KM120.6-KM126.5; equipment shown spans KM120.2-KM126.5.',
+    equipment: { cctv: [3, 3], avds: [2, 2], lcs: [3, 3], vms: [0, 0], miniVms: [2, 2] },
+    gantries: [placed('KM125.9SB', PROPOSED, { type: 'CCTV', status: 'ok' }), placed('KM121.8SB', PROPOSED, { type: 'CCTV', status: 'ok' }), placed('KM120.2SB', PROPOSED, { type: 'CCTV', status: 'ok' })],
+    cctv: ['KM125.9SB', 'KM121.8SB', 'KM120.2SB'],
+    lcs: [placed('KM126.0SB', PROPOSED, { open: false }), placed('KM123.0SB', PROPOSED, { open: false }), placed('KM122.1SB', PROPOSED, { open: false })],
+    traffic: [placed('KM126.0SB', PROPOSED, { spd: 52, vol: 64, occ: 34 }), placed('KM123.0SB', PROPOSED, { spd: 49, vol: 68, occ: 37 })],
+    vms: [],
+    miniVms: [placed('KM120.6SB', PROPOSED, { id: 'mvms-1', type: 'Unipole VMS', position: 'Start', status: 'Good', msg: 'SMARTLANE BERMULA', msg2: 'PATUHI ARAHAN' }), placed('KM126.5SB', PROPOSED, { id: 'mvms-2', type: 'Unipole VMS', position: 'End', status: 'Good', msg: 'SMARTLANE TAMAT', msg2: 'MASUK LORONG UTAMA' })],
+  },
+};
+
+export const INITIAL_LOCATIONS = LEGACY_LOCATIONS.map(location => ({ ...location, ...DOCUMENTED_PLACEMENTS[location.id], placementSource: 'PROJ-PS8K-DB-0326 printed pages 7-10' }));
 
 export const SCHEDULE_ITEMS = [
   { time: 'Today 17:00 – 19:30', name: 'Peak Hours — Evening Northbound', mode: 'Scheduled', status: 'Upcoming' },

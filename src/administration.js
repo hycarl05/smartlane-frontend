@@ -85,6 +85,25 @@ export function adminReducer(state, action) {
     record.credentialsConfigured = state.configs[record.id]?.credentialsConfigured || false;
     if (!errors.length) next.configs = { ...state.configs, [record.id]: record };
     actionLabel = 'Equipment configuration saved'; reference = record.id;
+  } else if (action.type === 'CONFIG_IMPORT') {
+    if (!Array.isArray(action.records) || !action.records.length) return fail(['Import contains no records.']);
+    const staged = { ...state.configs }, prepared = [];
+    for (const raw of action.records) {
+      const importKeys = ['id','name','description','model','ip','latitude','longitude','enabled','parameterNotes','pollingIntervalSeconds'];
+      const unknown = Object.keys(raw || {}).filter(key => !importKeys.includes(key));
+      if (unknown.length) { errors.push(`${raw?.id || 'Unknown device'} contains unsupported fields: ${unknown.join(', ')}.`); continue; }
+      const device = devices.find(d => d.id === raw.id && d.locationId === action.locationId);
+      if (!device) errors.push(`${raw.id || 'Unknown device'} is unavailable at this location.`);
+      else {
+        const base = state.configs[raw.id] || defaultConfig(device);
+        const candidate = pick({ ...base, ...raw, locationId: device.locationId, type: device.type }, ['id','name','description','locationId','type','model','ip','latitude','longitude','enabled','parameterNotes','pollingIntervalSeconds']);
+        const rowErrors = validateConfig(candidate, devices, staged);
+        if (rowErrors.length) errors.push(`${candidate.id}: ${rowErrors.join(' ')}`);
+        else { candidate.credentialsConfigured = base.credentialsConfigured; staged[candidate.id] = candidate; prepared.push(candidate); }
+      }
+    }
+    if (!errors.length) next.configs = staged;
+    record = prepared; actionLabel = 'Equipment configuration import applied atomically'; reference = `${prepared.length} equipment records`;
   } else if (action.type === 'CREDENTIAL_STATE') {
     const device = devices.find(d => d.id === action.id && d.locationId === action.locationId);
     if (!device || !['configure', 'clear'].includes(action.decision)) return fail(['Invalid device or credential decision.']);
@@ -119,7 +138,8 @@ export function adminReducer(state, action) {
   const event = { id: `ADMIN-EVT-${sequence}`, timestamp: new Date(action.now).toISOString(),
     actor: `Demo persona ${actor.id}`, actorId: actor.id, locationId, reference,
     action: actionLabel, decision: 'Confirmed', outcome: 'Simulated',
-    summary: action.type === 'CONFIG_SAVE' ? `Configuration enabled: ${record.enabled}; health/connectivity unchanged.` :
+    summary: action.type === 'CONFIG_IMPORT' ? `Imported IDs: ${record.map(r => r.id).join(', ')}; credentials and telemetry excluded; health/connectivity unchanged.` :
+      action.type === 'CONFIG_SAVE' ? `Configuration enabled: ${record.enabled}; health/connectivity unchanged.` :
       action.type === 'GROUP_SAVE' ? `Members: ${record.deviceIds.join(', ')}` :
       action.type === 'USER_SAVE' ? `Role: ${record.role}; active: ${record.active}; locations: ${record.locationIds.join(', ') || 'none'}; directory associated: ${!!record.directoryId}` : 'Mock metadata only; no external request.' };
   return { ...next, sequence, events: [event, ...state.events], feedback: { token: action.token, errors: [], message: `${actionLabel}. Simulated save only.` } };

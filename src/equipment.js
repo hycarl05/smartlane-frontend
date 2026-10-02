@@ -54,13 +54,16 @@ export function buildEquipment(locations) {
       const hasObservation = ['status', 'health', 'connectivity'].some(key => Object.hasOwn(item, key));
       const status = normalizeStatus(hasObservation ? item : { status: DEMO_OBSERVATIONS.get(id) });
       records.set(id, {
-        id, locationId: loc.id, location: loc.name, type, km: item.km,
+        id, locationId: loc.id, location: loc.name, direction: loc.direction, type, km: item.km,
         name: `${type} ${item.km || item.id}`, description: `${type} monitoring at ${item.km || 'demo station'}`,
         ...status, updatedAt: Object.hasOwn(item, 'updatedAt') ? item.updatedAt : MOCK_OBSERVED_AT,
         explanation: status.health === 'Offline' ? 'Mock communication fault: device unavailable.' :
           status.health === 'Unknown' ? 'No health observation supplied.' :
           status.health === 'Good' ? 'Mock observation: no equipment fault reported.' : 'Mock observation: inspection recommended.',
         illustrative: true, commandSimulation: !!loc.operation, ...extra,
+        inventoryClass: item.inventoryClass || 'Unverified demo record',
+        placementProvenance: item.placementProvenance || null,
+        observationProvenance: 'Synthetic demo observation',
       });
     };
     (loc.gantries || []).filter(g => g.type === 'CCTV').forEach(g => add('CCTV', g));
@@ -87,7 +90,15 @@ export function buildEquipment(locations) {
       observedAt: Object.hasOwn(sensor, 'updatedAt') ? sensor.updatedAt : MOCK_OBSERVED_AT,
       description: 'Illustrative radar observation · volume per demo 5-minute interval',
     }));
-    return [...records.values()].map(record => ({ ...record, history: [
+    const counters = {};
+    const labelled = [...records.values()].map(record => {
+      counters[record.type] = (counters[record.type] || 0) + 1;
+      return { ...record, demoLabel: `${record.type === 'LCS I/O Module' ? 'LCS I/O' : record.type} ${String(counters[record.type]).padStart(2, '0')}` };
+    });
+    const lcsLabels = Object.fromEntries(labelled.filter(record => record.type === 'LCS').map(record => [record.id, record.demoLabel]));
+    return labelled.map(record => ({ ...record,
+      associatedLcsName: record.associatedLcsId ? lcsLabels[record.associatedLcsId] : record.associatedLcsName,
+      history: [
       { at: record.updatedAt, health: record.health, connectivity: record.connectivity, note: record.explanation },
       { at: Number.isFinite(Date.parse(record.updatedAt)) ? new Date(Date.parse(record.updatedAt) - 300000).toISOString() : null, health: record.health,
         connectivity: record.connectivity, note: 'Illustrative earlier observation; not recorded telemetry.' },
@@ -100,6 +111,9 @@ export function summarizeEquipment(records) {
   records.forEach(d => { counts[d.health]++; if (isStale(d)) counts.stale++; });
   return counts;
 }
+
+export const recordsForLocation = (records, locationId) => records.filter(record => record.locationId === locationId);
+export const eventsForLocation = (events, locationId) => events.filter(event => event.locationId === locationId);
 
 export function equipmentAlarms(records) {
   return records.filter(d => ['Warning', 'Degraded', 'Offline'].includes(d.health)).map(d => ({

@@ -153,3 +153,11 @@ test('administrative events enter the shared audit table shape without operation
   assert.match(row.activity, /health\/connectivity unchanged/);
   assert.equal(row.operationId, null);
 });
+
+test('configuration import is atomic and rejects forbidden fields', () => {
+  const second = devices.find(d => d.id !== device.id && d.locationId === device.locationId);
+  const state = send(seed(), { type: 'CONFIG_IMPORT', records: [config(), { ...config({ id: second.id }), credentials: 'secret' }] });
+  assert.deepEqual(state.configs, {});
+  assert.match(state.feedback.errors.join(' '), /unsupported fields/);
+  assert.ok(!JSON.stringify(state).includes('secret'));
+});

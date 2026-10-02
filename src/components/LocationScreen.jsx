@@ -2,19 +2,19 @@ import React, { useState, useCallback, useEffect } from 'react';
 import EquipmentMonitoring, { EquipmentSummary, EquipmentAlarms } from './EquipmentMonitoring';
 import DeviceDetails from './DeviceDetails';
 import EquipmentStatusBadge from './EquipmentStatusBadge';
-import { equipmentAlarms, isStale } from '../equipment';
+import { equipmentAlarms, isStale, recordsForLocation } from '../equipment';
 import OperationControls from './OperationControls';
 import Schedule from './Schedule';
 import Administration from './Administration';
 import { useAccess } from '../accessContext';
-import VmsEditor, { VmsEditorSection, getDynamicVmsMessage } from './VmsEditor';
+import { getDynamicVmsMessage } from '../vmsMessages';
 import AuditLogDisplay from './AuditLogDisplay';
 import RoadLayoutDesigner from './RoadLayoutDesigner';
-import MapView from './MapView';
-import {
-  REPORT_TYPES,
-  RECENT_REPORTS
-} from '../data';
+import Phase5 from './Phase5';
+import { EquipmentGIS, EquipmentSchematic, VmsWorkflow } from './Phase6';
+import DashboardOverview from './DashboardOverview';
+import { Link, NavLink } from 'react-router-dom';
+import { LOCATION_NAVIGATION, locationPath } from '../routing';
 
 export default function LocationScreen({
   loc,
@@ -32,37 +32,37 @@ export default function LocationScreen({
   onSelectLocation,
   activeTab,
   setActiveTab,
-  onBack,
   time,
   date,
   user,
   onLogout,
   onUpdateLoc,
   onShowToast,
-  hideTopbars = false
+  hideTopbars = false,
+  phase5,
+  onPhase5,
+  phase6,
+  onPhase6
 }) {
   const { caps, allowed } = useAccess();
-  const [reportType, setReportType] = useState(0);
-  const [reportPeriod, setReportPeriod] = useState('Weekly');
 
 
 
   // VMS Editor Modal State
-  const [showVmsEditor, setShowVmsEditor] = useState(false);
   const [vmsModuleType, setVmsModuleType] = useState('vms'); // 'vms' | 'miniVms'
 
   // CCTV Inspection Modal State
   const [selectedDeviceId, setSelectedDeviceId] = useState(null);
   useEffect(() => { setSelectedDeviceId(null); }, [loc?.id]);
   const closeDevice = useCallback(() => setSelectedDeviceId(null), []);
-  const devices = equipmentRecords.filter(d => d.locationId === loc?.id);
+  const devices = recordsForLocation(equipmentRecords, loc?.id);
   const selectedDevice = devices.find(d => d.id === selectedDeviceId);
   const currentEquipmentAlarms = equipmentAlarms(devices);
   const cameras = devices.filter(d => d.type === 'CCTV');
 
   const handleOpenVmsEditor = (type = 'vms') => {
     setVmsModuleType(type);
-    setShowVmsEditor(true);
+    setActiveTab('vms');
   };
 
   if (!loc) return null;
@@ -75,7 +75,7 @@ export default function LocationScreen({
       {!hideTopbars && (
         <>
           <div className="topbar">
-            <button className="back-btn" onClick={onBack}>← All Locations</button>
+            <Link className="back-btn" to="/locations">← All Locations</Link>
             <div className="loc-crumb">
               <select
                 className="loc-select-breadcrumb"
@@ -111,65 +111,24 @@ export default function LocationScreen({
             </div>
           </div>
 
-          <div className="tabbar">
-            <button
-              hidden={!allowed('overview')} className={`tab-btn ${activeTab === 'overview' || activeTab === 'corridor' ? 'active' : ''}`}
-              onClick={() => setActiveTab('overview')}
-            >
-              Overview
-            </button>
-            <button
-              hidden={!allowed('schedule')} className={`tab-btn ${activeTab === 'schedule' ? 'active' : ''}`}
-              onClick={() => setActiveTab('schedule')}
-            >
-              Schedule
-            </button>
-            <button hidden={!allowed('exceptions')} className={`tab-btn ${activeTab === 'exceptions' ? 'active' : ''}`} onClick={() => setActiveTab('exceptions')}>Holidays &amp; Exceptions</button>
-            <button
-              hidden={!allowed('log')} className={`tab-btn ${activeTab === 'log' ? 'active' : ''}`}
-              onClick={() => setActiveTab('log')}
-            >
-              Alarms &amp; Audit
-              {currentEquipmentAlarms.length > 0 && <span className="badge">{currentEquipmentAlarms.length}</span>}
-            </button>
-<button hidden={!allowed('groups')} className={`tab-btn ${activeTab === 'groups' ? 'active' : ''}`} onClick={() => setActiveTab('groups')}>Equipment Groups</button><button hidden={!allowed('users')} className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>User Management</button><button hidden={!allowed('equipment')} className={`tab-btn ${activeTab === 'equipment' ? 'active' : ''}`} onClick={() => setActiveTab('equipment')}>Equipment Status</button>
-            <button
-              hidden={!allowed('reports')} className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
-              onClick={() => setActiveTab('reports')}
-            >
-              Reports
-            </button>
-            <button
-              hidden={!allowed('settings')} className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
-              onClick={() => setActiveTab('settings')}
-            >
-              Equipment Configuration
-            </button>
-            <button
-              hidden={!allowed('designer')} className={`tab-btn ${activeTab === 'designer' ? 'active' : ''}`}
-              onClick={() => setActiveTab('designer')}
-            >
-              Road Studio
-            </button>
-            <button
-              hidden={!allowed('vms')} className={`tab-btn ${activeTab === 'vms' ? 'active' : ''}`}
-              onClick={() => setActiveTab('vms')}
-            >
-              VMS Editor
-            </button>
-            <button
-              hidden={!allowed('map')} className={`tab-btn ${activeTab === 'map' ? 'active' : ''}`}
-              onClick={() => setActiveTab('map')}
-            >
-              GIS Map
-            </button>
-          </div>
+          <nav className="tabbar" aria-label="Location pages">{LOCATION_NAVIGATION.map(item => allowed(item.permission) && <NavLink key={item.key} to={locationPath(loc.id, item.key)} className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}>{item.label}{item.key === 'log' && currentEquipmentAlarms.length > 0 && <span className="badge">{currentEquipmentAlarms.length}</span>}</NavLink>)}</nav>
         </>
       )}
 
-      <div className="tab-panels">{!caps.operate && <p className="equipment-notice">Read-only operation status: {loc.phaseLabel} · {operation?.mode} · {operation?.intervention ? 'Intervention active' : operation?.pendingDecision ? 'Awaiting operator decision' : operation?.command.status}. Controls are unavailable for this demo persona.</p>}{caps.operate && !['schedule', 'exceptions', 'settings', 'groups', 'users'].includes(activeTab) && <OperationControls key={loc.id} loc={loc} op={operation} now={operationNow} dispatch={onOperation} />}
+      <div className="tab-panels">{!caps.operate && <p className="equipment-notice">Read-only operation status: {loc.phaseLabel} · {operation?.mode} · {operation?.intervention ? 'Intervention active' : operation?.pendingDecision ? 'Awaiting operator decision' : operation?.command.status}. Controls are unavailable for this demo persona.</p>}{caps.operate && !['schedule', 'exceptions', 'settings', 'groups', 'users', 'reports', 'analytics', 'maintenance', 'health', 'housekeeping'].includes(activeTab) && <OperationControls key={loc.id} loc={loc} op={operation} now={operationNow} dispatch={onOperation} />}
         {/* OVERVIEW / CORRIDOR TAB */}
-        {isOverviewOrCorridor && (
+        {isOverviewOrCorridor && <DashboardOverview
+          loc={loc}
+          devices={devices}
+          operation={operation}
+          auditLogs={auditLogs}
+          canReadVms={caps.vmsRead}
+          onSelectDevice={setSelectedDeviceId}
+          onOpenEquipment={() => setActiveTab('equipment')}
+          onOpenAudit={() => setActiveTab('log')}
+          onOpenVms={() => handleOpenVmsEditor('vms')}
+        />}
+        {isOverviewOrCorridor && activeTab === '__legacy_overview' && (
           <div className="tab-panel active">
             <EquipmentSummary records={devices} onOpen={() => setActiveTab('equipment')} />
             {/* 2. LIVE ROUTE TIMELINE (SIGNATURE HIGHWAY TRACK) */}
@@ -352,43 +311,12 @@ export default function LocationScreen({
 
 
 
-        {/* GIS LIVE MAP TAB */}
-        {activeTab === 'map' && (
-          <div className="tab-panel active" style={{ padding: 0, height: 'calc(100vh - 130px)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '12px 20px', background: 'var(--panel-bg, #1e293b)', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <span style={{ fontWeight: '700', fontSize: '15px', color: '#f8fafc' }}>🗺️ Live GIS Map — {loc.name}</span>
-                <span style={{ fontSize: '12px', color: '#94a3b8', marginLeft: '12px' }}>Real-time location &amp; gantry maplibre visualization</span>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '6px', background: loc.status === 'active' ? '#10b98122' : '#64748b22', color: loc.status === 'active' ? '#10b981' : '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', fontWeight: '600' }}>
-                  Status: {loc.status.toUpperCase()}
-                </span>
-                <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '6px', background: '#2563eb22', color: '#60a5fa', border: '1px solid rgba(37,99,235,0.3)', fontWeight: '600' }}>
-                  Direction: {loc.direction}
-                </span>
-              </div>
-            </div>
-            <div style={{ flex: 1, position: 'relative', minHeight: '400px' }}>
-              <MapView
-                center={loc.coordinates || [101.7650, 2.8910]}
-                zoom={13}
-                locations={[loc]}
-                interactive={true}
-                containerStyle={{ borderRadius: 0 }}
-              />
-            </div>
-          </div>
-        )}
-
+        {/* GIS EQUIPMENT MAP AND SCHEMATIC */}
+        {activeTab === 'map' && <EquipmentGIS loc={loc} devices={equipmentRecords} onOpenAnalytics={() => setActiveTab('analytics')} />}
+        {activeTab === 'schematic' && <EquipmentSchematic loc={loc} devices={equipmentRecords} />}
         {/* VMS CONTROL & EDITOR TAB */}
         {activeTab === 'vms' && (
-          <VmsEditorSection
-            loc={loc}
-            locations={locations}
-            onUpdateLoc={onUpdateLoc}
-            onShowToast={onShowToast}
-          />
+          <VmsWorkflow loc={loc} devices={equipmentRecords} state={phase6} dispatch={onPhase6} editable={caps.vmsEdit} initialModule={vmsModuleType === 'miniVms' ? 'Mini VMS' : 'VMS'} />
         )}
 
         {/* ROAD LAYOUT DESIGNER TAB */}
@@ -416,92 +344,20 @@ export default function LocationScreen({
             <EquipmentAlarms records={devices} onDetails={setSelectedDeviceId} />
             <h2>Historical audit records</h2>
             <AuditLogDisplay
-              auditLogs={auditLogs.filter(log => log.locationId ? log.locationId === loc.id : log.location === loc.name || log.module === 'Administration')}
+              auditLogs={auditLogs}
               locations={locations}
               user={user}
               onShowToast={onShowToast}
-              currentLocationFilter={'all'}
+              currentLocationFilter={loc.id}
             />
           </div>
         )}
 
-        {/* REPORTS TAB */}
-        {activeTab === 'reports' && (
-          <div className="tab-panel active">
-            <div className="reports-grid">
-              <div className="panel" style={{ minHeight: 0 }}>
-                <div className="panel-title">Generate Report</div>
-                <div className="report-types">
-                  {REPORT_TYPES.map((r, idx) => (
-                    <div
-                      key={idx}
-                      className={`rtype ${reportType === idx ? 'sel' : ''}`}
-                      onClick={() => setReportType(idx)}
-                    >
-                      <div className="t1">{r.title}</div>
-                      <div className="t2">{r.desc}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="period-row">
-                  {['Weekly', 'Monthly', 'Annual'].map(p => (
-                    <div
-                      key={p}
-                      className={`period-chip ${reportPeriod === p ? 'on' : ''}`}
-                      onClick={() => setReportPeriod(p)}
-                    >
-                      {p}
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  className="gen-btn"
-                  onClick={() => onShowToast(`Generated ${REPORT_TYPES[reportType].title} (${reportPeriod})`)}
-                >
-                  Generate PDF
-                </button>
-              </div>
-
-              <div className="panel" style={{ minHeight: 0 }}>
-                <div className="panel-title">Recently Generated</div>
-                <div className="recent-reports">
-                  {RECENT_REPORTS.map((r, idx) => (
-                    <div key={idx} className="rrow">
-                      <span className="name">{r.name}</span>
-                      <a
-                        href="#"
-                        className="dl"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          onShowToast(`Downloading ${r.name}`);
-                        }}
-                      >
-                        Download PDF
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {['reports','analytics','maintenance','health','housekeeping'].includes(activeTab) && <div className="tab-panel active"><Phase5 kind={activeTab} loc={loc} devices={equipmentRecords} auditLogs={auditLogs} operations={operations} state={phase5} dispatch={onPhase5} onAdmin={onAdmin} actorId={user?.username || 'demo'} now={operationNow} editable={caps.maintenanceEdit} /></div>}
 
         {/* SETTINGS TAB */}
         {['settings', 'groups', 'users'].includes(activeTab) && caps.configure && <Administration key={`${loc.id}:${activeTab}`} kind={activeTab} loc={loc} locations={administrationLocations} devices={equipmentRecords} state={administration} dispatch={onAdmin} />}
       </div>
-
-      {/* VMS & MINI VMS MESSAGE TEMPLATE EDITOR MODAL */}
-      <VmsEditor
-        isOpen={showVmsEditor}
-        onClose={() => setShowVmsEditor(false)}
-        moduleType={vmsModuleType}
-        loc={loc}
-        locations={locations}
-        onUpdateLoc={onUpdateLoc}
-        onShowToast={onShowToast}
-      />
 
       {selectedDevice && <DeviceDetails key={selectedDevice.id} device={selectedDevice} onClose={closeDevice} />}
 

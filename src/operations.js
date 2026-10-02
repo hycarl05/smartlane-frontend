@@ -1,6 +1,8 @@
 import { DEMO_OPERATION_POLICY as P, PHASE_NAMES, INTERVENTION_REASONS } from './operationPolicy.js';
 import { createScheduleStore, changeSchedules, occurrences, simulationEligibility } from './scheduling.js';
 
+const ACKNOWLEDGEMENT_OPERATIONS = new Set(['Activate', 'Deactivate']);
+
 export function emptyOperation(locationId) {
   return { locationId, operationId: null, mode: 'Manual', phase: 0, pendingDecision: null,
     intervention: null, warningDeadline: null, plannedEnd: null, startedAt: null,
@@ -40,7 +42,9 @@ export function operationReducer(state, action) {
   const advance = original => {
     let op = { ...original };
     if (op.pendingDecision?.expiresAt && now >= op.pendingDecision.expiresAt) {
-      emit(op, op.pendingDecision.kind, 'Acknowledgement expired');
+      emit(op, op.pendingDecision.kind, 'Cancelled: acknowledgement expired', op.phase, {
+        acknowledgement: 'Missing', applicableVmsMessages: op.pendingDecision.vmsMessages || [], selectedVmsMessages: [], outcome: 'Cancelled',
+      });
       op.pendingDecision = null; op.command = { status: 'Expired' };
       op.lastResult = 'Acknowledgement expired; no transition started (simulation).';
     }
@@ -93,11 +97,11 @@ export function operationReducer(state, action) {
     if (error || !P.durationsMinutes.includes(action.durationMinutes)) return { ...next, scheduleStore: { ...next.scheduleStore, feedback: { locationId: action.locationId, errors: [error || 'Select a Phase 2 demo duration of 30 or 60 minutes.'], message: '' } } };
     const shared = { locationId: action.locationId, now: action.now, actor: action.actor };
     let requested = operationReducer(next, { ...shared, type: 'MODE', mode: 'Scheduled' });
-    requested = operationReducer(requested, { ...shared, type: 'REQUEST', kind: 'Activate', durationMinutes: action.durationMinutes, occurrenceId: occurrence.id });
+    requested = operationReducer(requested, { ...shared, type: 'REQUEST', kind: 'Activate', durationMinutes: action.durationMinutes, occurrenceId: occurrence.id, vmsMessages: action.vmsMessages });
     const operation = requested.byId[action.locationId];
     return { ...requested, scheduleStore: { ...requested.scheduleStore,
       attempts: { ...requested.scheduleStore.attempts, [occurrence.id]: { occurrence, operationId: operation.operationId, requestId: operation.pendingDecision.id, requestedAt: now } },
-      feedback: { locationId: action.locationId, errors: [], message: 'Scheduled activation requested in simulation. Open this location from the persistent decisions inbox to review the Phase 2 acknowledgement; no lane has opened.' } } };
+      feedback: { locationId: action.locationId, errors: [], message: 'Scheduled activation requested in simulation. Open this location from the persistent decisions inbox to review the activation acknowledgement; no lane has opened.' } } };
   }
   if (['TICK', 'ADVANCE'].includes(action.type)) return next;
   let op = next.byId[action.locationId];
@@ -111,26 +115,27 @@ export function operationReducer(state, action) {
   } else if (action.type === 'REQUEST' && !op.pendingDecision && !op.warningDeadline && op.command.status !== 'Transition pending') {
     const kind = action.kind;
     const allowed = (kind === 'Activate' && idle && (op.mode === 'Manual' || P.durationsMinutes.includes(action.durationMinutes))) ||
-      (kind === 'Deactivate' && canDeactivate(op, now)) ||
-      (kind === 'Intervene' && op.phase === 2 && !op.intervention) ||
-      (kind === 'Resume' && op.phase === 2 && !!op.intervention) ||
-      (kind === 'Extend' && op.phase === 2 && !!op.plannedEnd && !op.intervention);
+      (kind === 'Deactivate' && canDeactivate(op, now));
     if (!allowed) return next;
     if (kind === 'Activate') {
       op.operationId = `DEMO-${op.locationId}-${next.sequence + 1}`;
       op.scheduleOccurrenceId = action.occurrenceId || null;
     }
-    const id = emit(op, kind, 'Requested; awaiting explicit operator decision');
+    const requiresAcknowledgement = ACKNOWLEDGEMENT_OPERATIONS.has(kind);
+    const vmsMessages = Array.isArray(action.vmsMessages) ? [...new Set(action.vmsMessages.filter(Boolean))] : [];
+    const id = emit(op, kind, 'Alert displayed; awaiting operator acknowledgement', op.phase, { applicableVmsMessages: vmsMessages, outcome: 'Pending' });
     op.pendingDecision = { id, kind, requestedAt: now, durationMinutes: action.durationMinutes,
-      expiresAt: ['Activate', 'Deactivate'].includes(kind) ? now + P.acknowledgementMs : null };
+      requiresAcknowledgement, vmsMessages,
+      expiresAt: now + P.acknowledgementMs };
     op.command = { status: 'Awaiting acknowledgement' };
   } else if (action.type === 'CANCEL' && op.pendingDecision?.id === action.requestId) {
-    emit(op, op.pendingDecision.kind, 'Cancelled'); op.pendingDecision = null;
+    const pending = op.pendingDecision;
+    emit(op, pending.kind, pending.requiresAcknowledgement ? 'Cancelled before acknowledgement' : 'Decision cancelled', op.phase, {
+      acknowledgement: pending.requiresAcknowledgement ? 'Missing' : 'Not required', applicableVmsMessages: pending.vmsMessages || [], selectedVmsMessages: [], outcome: 'Cancelled',
+    }); op.pendingDecision = null;
     op.command = { status: 'Cancelled' }; op.lastResult = 'Decision cancelled; no transition performed (simulation).';
   } else if (action.type === 'CONFIRM' && op.pendingDecision?.id === action.requestId) {
     const pending = op.pendingDecision;
-    if (pending.kind === 'Intervene' && !INTERVENTION_REASONS.includes(action.reason)) return next;
-    if (pending.kind === 'Extend' && !P.extensionMinutes.includes(action.minutes)) return next;
     const previous = op.phase;
     if (pending.kind === 'Activate' || pending.kind === 'Deactivate') {
       if (pending.kind === 'Activate') {
@@ -139,30 +144,61 @@ export function operationReducer(state, action) {
       }
       op.phase = pending.kind === 'Activate' ? 1 : 3;
       op.durationMinutes = pending.kind === 'Activate' ? pending.durationMinutes : op.durationMinutes;
-      op.warningDeadline = now + op.warningMs;
-      op.command = { status: 'Warning phase' };
+      op.warningDeadline = null;
       op.notification = null;
-      op.lastResult = `${pending.kind} acknowledged; warning starts now (demo policy).`;
-    } else if (pending.kind === 'Intervene') {
-      op.intervention = { reason: action.reason, startedAt: now, remindAt: now + P.interventionReminderMs };
-      op.notification = null; op.command = { status: 'Policy awaiting approval' };
-      op.lastResult = 'Manual intervention active. VMS/LCS instructions await approved policy; no commands issued.';
-    } else if (pending.kind === 'Resume') {
-      const reason = op.intervention.reason;
-      op.intervention = null; op.notification = null;
-      op.nextDecisionAt = Math.max(now + P.recurringDecisionMs, op.mode === 'Automated' ? op.startedAt + P.automatedMinimumMs : 0);
-      op.command = { status: 'Simulated success' };
-      op.lastResult = 'Resumed existing simulated operation; operation ID, start and planned end retained.';
-      emit(op, 'Resume context', reason, previous, { interventionReason: reason });
-    } else if (pending.kind === 'Extend') {
-      const oldEnd = op.plannedEnd;
-      op.plannedEnd = Math.max(now, oldEnd) + action.minutes * 60_000;
-      op.nextDecisionAt = Math.max(now + P.recurringDecisionMs, op.mode === 'Automated' ? op.startedAt + P.automatedMinimumMs : 0); op.notification = null;
-      op.command = { status: 'Simulated success' };
-      op.lastResult = `Extended by ${action.minutes} minutes in simulation.`;
+      op.lastResult = `${pending.kind} acknowledged; configured warning retained but bypassed by design simulation.`;
     }
-    emit(op, pending.kind, 'Confirmed', previous, { extensionMinutes: pending.kind === 'Extend' ? action.minutes : null });
+    const selectedVmsMessages = pending.vmsMessages;
+    emit(op, pending.kind, pending.requiresAcknowledgement ? 'Acknowledged and proceeded' : 'Decision confirmed', previous, {
+      acknowledgement: pending.requiresAcknowledgement ? 'Acknowledged' : 'Not required',
+      selectedVmsMessages,
+      extensionMinutes: null,
+    });
     op.pendingDecision = null;
+    if (action.simulationResult === 'Failed') {
+      op.command = { status: 'Failed', completedAt: now };
+      op.lastResult = `${pending.kind} simulated device transition failed; operation state was not reported as completed.`;
+      emit(op, 'Transition', op.lastResult, op.phase, { outcome: 'Failed' });
+    } else if (pending.kind === 'Activate') {
+      const prePhase = op.phase;
+      op.phase = 2;
+      op.startedAt = now;
+      op.plannedEnd = op.mode === 'Manual' ? null : now + op.durationMinutes * 60_000;
+      op.nextDecisionAt = now + (op.mode === 'Automated' ? P.automatedMinimumMs : P.recurringDecisionMs);
+      op.command = { status: 'Simulated success', completedAt: now };
+      op.lastResult = 'Activation completed immediately in design simulation; no live equipment response was received.';
+      emit(op, 'Transition', op.lastResult, prePhase);
+    } else if (pending.kind === 'Deactivate') {
+      const prePhase = op.phase;
+      op.phase = 4;
+      op.endedAt = now;
+      op.notification = null; op.intervention = null; op.nextDecisionAt = null;
+      op.command = { status: 'Simulated success', completedAt: now };
+      op.lastResult = 'Deactivation completed immediately in design simulation; no live equipment response was received.';
+      emit(op, 'Transition', op.lastResult, prePhase);
+      op.phase = 5;
+      op.postAt = now;
+      op.lastResult = 'Post-operation state reached immediately in design simulation.';
+      emit(op, 'Transition', op.lastResult, 4);
+    }
+  } else if (action.type === 'INTERVENE' && op.phase === 2 && !op.intervention && !op.pendingDecision && INTERVENTION_REASONS.includes(action.reason)) {
+    op.intervention = { reason: action.reason, startedAt: now, remindAt: now + P.interventionReminderMs };
+    op.notification = null; op.command = { status: 'Policy awaiting approval' };
+    op.lastResult = 'Manual intervention active. VMS/LCS instructions await approved policy; no commands issued.';
+    emit(op, 'Intervene', 'Operator selected manual intervention', op.phase, { acknowledgement: 'Not required', interventionReason: action.reason });
+  } else if (action.type === 'RESUME' && op.phase === 2 && op.intervention && !op.pendingDecision) {
+    const reason = op.intervention.reason;
+    op.intervention = null; op.notification = null;
+    op.nextDecisionAt = Math.max(now + P.recurringDecisionMs, op.mode === 'Automated' ? op.startedAt + P.automatedMinimumMs : 0);
+    op.command = { status: 'Simulated success' };
+    op.lastResult = 'Resumed existing simulated operation; operation ID, start and planned end retained.';
+    emit(op, 'Resume', 'Operator resumed operation', op.phase, { acknowledgement: 'Not required', interventionReason: reason });
+  } else if (action.type === 'EXTEND' && op.phase === 2 && op.plannedEnd && !op.intervention && !op.pendingDecision && P.extensionMinutes.includes(action.minutes)) {
+    op.plannedEnd = Math.max(now, op.plannedEnd) + action.minutes * 60_000;
+    op.nextDecisionAt = Math.max(now + P.recurringDecisionMs, op.mode === 'Automated' ? op.startedAt + P.automatedMinimumMs : 0);
+    op.notification = null; op.command = { status: 'Simulated success' };
+    op.lastResult = `Extended by ${action.minutes} minutes in simulation.`;
+    emit(op, 'Extend', 'Operator extended operation', op.phase, { acknowledgement: 'Not required', extensionMinutes: action.minutes });
   } else if (action.type === 'KEEP_INTERVENTION' && op.intervention && op.notification && !op.pendingDecision) {
     op.intervention = { ...op.intervention, remindAt: now + P.interventionReminderMs };
     op.notification = null; emit(op, 'Intervention reminder', 'Continue intervention');
@@ -192,10 +228,12 @@ export function operationAudit(events, locations) {
   return events.map(e => ({ ...e, date: e.timestamp.slice(0, 10), time: e.timestamp.slice(11, 19),
     initiator: e.actor, initiatorRole: 'Demo actor', module: 'Smartlane Operation',
     location: locations.find(l => l.id === e.locationId)?.name || e.locationId,
-    equipmentId: e.operationId || 'N/A', result: 'Simulated',
+    equipmentId: e.operationId || 'N/A', operationType: e.action, user: e.actor, result: e.outcome,
     activity: `${e.action}: ${e.decision}. ${PHASE_NAMES[e.previousPhase]} → ${PHASE_NAMES[e.newPhase]}` +
       (e.interventionReason ? `; Reason: ${e.interventionReason}` : '') +
       (e.occurrenceId ? `; Schedule occurrence: ${e.occurrenceId}` : '') +
-      (e.extensionMinutes ? `; Extension: ${e.extensionMinutes} min` : ''),
+      (e.extensionMinutes ? `; Extension: ${e.extensionMinutes} min` : '') +
+      (e.acknowledgement ? `; Acknowledgement: ${e.acknowledgement}` : '') +
+      (e.selectedVmsMessages?.length ? `; VMS: ${e.selectedVmsMessages.join(' | ')}` : ''),
   }));
 }

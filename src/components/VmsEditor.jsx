@@ -4,59 +4,7 @@ import EquipmentStatusBadge from './EquipmentStatusBadge';
 import { buildEquipment, deviceId, isStale } from '../equipment';
 import { PHASE_NAMES } from '../operationPolicy';
 import { useAccess } from '../accessContext';
-
-export const DEFAULT_ROLE_TEMPLATES = {
-  entry: {
-    1: { msg: 'PERHATIAN: BERSEDIA', msg2: 'SMARTLANE AKAN DIBUKA' },
-    2: { msg: 'SMARTLANE BERMULA', msg2: 'GUNAKAN LORONG KECEMASAN' },
-    3: { msg: 'SMARTLANE AKAN DITUTUP', msg2: 'BERSEDIA MASUK LORONG UTAMA' },
-    4: { msg: 'PEMERIKSAAN LORONG', msg2: 'PATUHI ARAHAN PETUGAS' },
-    5: { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' },
-    0: { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' }
-  },
-  exit: {
-    1: { msg: 'PERHATIAN: BERSEDIA', msg2: 'SMARTLANE AKAN DIBUKA' },
-    2: { msg: 'SMARTLANE TAMAT', msg2: 'MASUK KEMBALI KE LORONG UTAMA' },
-    3: { msg: 'SMARTLANE AKAN DITUTUP', msg2: 'KOSONGKAN LORONG KECEMASAN' },
-    4: { msg: 'PEMERIKSAAN LORONG', msg2: 'PATUHI ARAHAN PETUGAS' },
-    5: { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' },
-    0: { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' }
-  },
-  mini: {
-    1: { msg: 'PATUHI ARAHAN', msg2: 'PERHATIKAN ISYARAT LCS' },
-    2: { msg: 'JALUR KECEMASAN', msg2: 'DIBUKA SEMENTARA' },
-    3: { msg: 'BERSEDIA KELUAR', msg2: 'SEGERA MASUK LORONG UTAMA' },
-    4: { msg: 'PEMERIKSAAN KAWASAN', msg2: 'PANDU DENGAN CERMAT' },
-    5: { msg: 'LORONG KECEMASAN', msg2: 'DITUTUP SEMENTARA' },
-    0: { msg: 'LORONG KECEMASAN', msg2: 'DITUTUP SEMENTARA' }
-  }
-};
-
-export function getDynamicVmsMessage(sign, phase = 0) {
-  if (!sign) return { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' };
-  const pNum = Number(phase) || 0;
-  if (pNum === -1) return { msg: 'INTERVENTION ACTIVE', msg2: 'VMS POLICY AWAITING APPROVAL' };
-
-  if (sign.phaseTemplates && sign.phaseTemplates[pNum]) {
-    return sign.phaseTemplates[pNum];
-  }
-
-  let role = 'entry';
-  if (sign.position === 'Exit') {
-    role = 'exit';
-  } else if (sign.position === 'Entry') {
-    role = 'entry';
-  } else if (
-    sign.type?.toLowerCase().includes('mini') ||
-    sign.position === 'Intermediate' ||
-    sign.id?.startsWith('mvms')
-  ) {
-    role = 'mini';
-  }
-
-  const roleMap = DEFAULT_ROLE_TEMPLATES[role] || DEFAULT_ROLE_TEMPLATES.entry;
-  return roleMap[pNum] || roleMap[0] || roleMap[5] || { msg: 'SMARTLANE DITUTUP', msg2: 'GUNA LORONG UTAMA SAHAJA' };
-}
+import { DEFAULT_ROLE_TEMPLATES, getDynamicVmsMessage } from '../vmsMessages';
 
 const ENTRY_PRESETS = [
   { msg: 'SMARTLANE BERMULA', msg2: 'GUNAKAN LORONG KECEMASAN' },

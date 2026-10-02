@@ -3,7 +3,7 @@ import MonitoringDialog from './MonitoringDialog';
 import EquipmentStatusBadge from './EquipmentStatusBadge';
 import CctvModal from './CctvModal';
 import { formatTimestamp, isStale } from '../equipment';
-import { getDynamicVmsMessage } from './VmsEditor';
+import { getDynamicVmsMessage } from '../vmsMessages';
 
 export default function DeviceDetails({ device, onClose }) {
   const [preview, setPreview] = useState(false);

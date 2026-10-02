@@ -1,14 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { INITIAL_LOCATIONS } from '../src/data.js';
-import { buildEquipment, deviceId, normalizeStatus, EQUIPMENT_TYPES, HEALTH_STATES, EMPTY_FILTERS, queryEquipment, equipmentAlarms, summarizeEquipment, isStale, monitoringScenario } from '../src/equipment.js';
+import { buildEquipment, deviceId, normalizeStatus, EQUIPMENT_TYPES, HEALTH_STATES, EMPTY_FILTERS, queryEquipment, equipmentAlarms, summarizeEquipment, isStale, monitoringScenario, recordsForLocation, eventsForLocation } from '../src/equipment.js';
 
 const records = buildEquipment(INITIAL_LOCATIONS);
 test('every location has all required types and IDs are globally unique', () => {
   assert.equal(new Set(records.map(d => d.id)).size, records.length);
   for (const location of INITIAL_LOCATIONS) {
     const scoped = records.filter(d => d.locationId === location.id);
-    assert.deepEqual([...new Set(scoped.map(d => d.type))].sort(), [...EQUIPMENT_TYPES].sort());
+    const expectedTypes = EQUIPMENT_TYPES.filter(type => type !== 'VMS');
+    assert.deepEqual([...new Set(scoped.map(d => d.type))].sort(), [...expectedTypes].sort());
     assert.ok(scoped.every(d => d.location === location.name && d.illustrative));
   }
   assert.ok(HEALTH_STATES.every(health => records.some(d => d.health === health)));
@@ -19,7 +20,7 @@ test('legacy faults never become healthy, missing status stays unknown, connecti
   }
   assert.deepEqual(normalizeStatus({}), { health: 'Unknown', connectivity: 'Unknown' });
   assert.deepEqual(normalizeStatus({ health: 'Warning' }), { health: 'Warning', connectivity: 'Active' });
-  const camera = records.find(d => d.id === deviceId('sbj', 'CCTV', { km: 'KM46.2NB' }));
+  const camera = records.find(d => d.id === deviceId('sbj', 'CCTV', { km: 'KM162.3SB' }));
   assert.equal(camera.health, 'Offline');
 });
 test('device IDs and LCS I/O associations survive reordering', () => {
@@ -70,4 +71,43 @@ test('new inventory without observations never inherits healthy demo fixtures', 
   const additions = buildEquipment([{ id: 'new-location', name: 'Unconfirmed',
     lcs: [{ km: 'X', open: true }], traffic: [{ km: 'Y', spd: 50 }] }]);
   assert.ok(additions.length === 3 && additions.every(d => d.health === 'Unknown'));
+});
+
+test('documented location inventory is isolated by stable location ID', () => {
+  const expected = { pms: 13, dopg: 13, sbj: 13, bsd: 13 };
+  const physical = { pms: 10, dopg: 10, sbj: 10, bsd: 10 };
+  for (const location of INITIAL_LOCATIONS) {
+    const scoped = recordsForLocation(records, location.id);
+    assert.equal(scoped.length, expected[location.id]);
+    assert.equal(scoped.filter(device => device.type !== 'LCS I/O Module').length, physical[location.id]);
+    assert.equal(scoped.filter(device => device.type === 'CCTV').length, 3);
+    assert.equal(scoped.filter(device => device.type === 'Mini VMS').length, 2);
+    assert.equal(scoped.filter(device => device.type === 'AVDS').length, 2);
+    assert.equal(scoped.filter(device => device.type === 'LCS').length, 3);
+    assert.equal(scoped.filter(device => device.type === 'LCS I/O Module').length, 3);
+    assert.equal(new Set(scoped.map(device => device.demoLabel)).size, scoped.length);
+    assert.ok(scoped.every(device => /^.+ \d{2}$/.test(device.demoLabel)));
+    assert.ok(scoped.filter(device => device.type === 'LCS I/O Module').every(device =>
+      scoped.some(parent => parent.id === device.associatedLcsId && parent.demoLabel === device.associatedLcsName)));
+    assert.ok(scoped.every(device => device.locationId === location.id && device.direction === location.direction));
+    assert.ok(scoped.every(device => !recordsForLocation(records, location.id === 'pms' ? 'dopg' : 'pms').some(other => other.id === device.id)));
+  }
+  assert.equal(INITIAL_LOCATIONS.find(location => location.id === 'pms').direction, 'Northbound');
+  assert.ok(INITIAL_LOCATIONS.filter(location => location.id !== 'pms').every(location => location.direction === 'Southbound'));
+  assert.equal(INITIAL_LOCATIONS.find(location => location.id === 'pms').excludedPrototypeInventory.cctv.length, 1);
+  assert.equal(INITIAL_LOCATIONS.find(location => location.id === 'pms').excludedPrototypeInventory.vms.length, 1);
+});
+
+test('A to B to A selection never retains cross-location devices, alarms, or events', () => {
+  const audit = [{ id: 'a', locationId: 'pms' }, { id: 'b', locationId: 'dopg' }, { id: 'global' }];
+  const a1 = recordsForLocation(records, 'pms');
+  const b = recordsForLocation(records, 'dopg');
+  const a2 = recordsForLocation(records, 'pms');
+  assert.deepEqual(a2.map(device => device.id), a1.map(device => device.id));
+  assert.ok(a1.every(device => device.locationId === 'pms'));
+  assert.ok(b.every(device => device.locationId === 'dopg'));
+  assert.ok(!a1.some(device => b.some(other => other.id === device.id)));
+  assert.ok(equipmentAlarms(a1).every(alarm => alarm.locationId === 'pms'));
+  assert.deepEqual(eventsForLocation(audit, 'pms').map(event => event.id), ['a']);
+  assert.deepEqual(eventsForLocation(audit, 'dopg').map(event => event.id), ['b']);
 });

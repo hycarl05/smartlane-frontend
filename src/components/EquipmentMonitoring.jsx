@@ -6,9 +6,13 @@ import DeviceDetails from './DeviceDetails';
 export function EquipmentSummary({ records, onOpen }) {
   const counts = summarizeEquipment(records);
   return <section className="equipment-summary" aria-label="Equipment health summary">
-    <div><strong>Equipment health · {counts.total} devices</strong><small>Illustrative mock inventory · last observed health</small></div>
-    <div className="equipment-summary-counts">{[...HEALTH_STATES, 'Unknown'].map(health => <span key={health}><EquipmentStatusBadge device={{ health }} /> <b>{counts[health]}</b></span>)}<span>Stale: <b>{counts.stale}</b></span></div>
-    {onOpen && <button type="button" onClick={onOpen}>View Equipment Status →</button>}
+    <div className="equipment-summary-heading">
+      <span className="equipment-summary-icon" aria-hidden="true"><i /><i /><i /></span>
+      <div><span className="equipment-summary-kicker">Network health</span><strong>Equipment overview</strong><small>Illustrative inventory · latest observed state</small></div>
+    </div>
+    <div className="equipment-summary-total"><strong>{counts.total}</strong><span>Devices<br />monitored</span></div>
+    <div className="equipment-summary-counts">{[...HEALTH_STATES, 'Unknown'].map(health => <span className={`equipment-summary-metric equipment-summary-metric--${health.toLowerCase()}`} key={health}><b>{counts[health]}</b><span>{health}</span></span>)}<span className="equipment-summary-metric equipment-summary-metric--stale"><b>{counts.stale}</b><span>Stale</span></span></div>
+    {onOpen && <button className="equipment-summary-link" type="button" onClick={onOpen}>View equipment status <span aria-hidden="true">→</span></button>}
   </section>;
 }
 
