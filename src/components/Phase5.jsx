@@ -1,31 +1,10 @@
 ﻿import React, { useMemo, useState } from 'react';
-import { REPORT_TEMPLATES, aggregateAvds, archiveEligibility, sampleAvdsHistory, auditInRange } from '../phase5';
+import { aggregateAvds, archiveEligibility, sampleAvdsHistory } from '../phase5';
+import ReportsMvp from './Reports';
 
 const fmt = value => value == null ? 'Missing' : Number(value).toFixed(1);
 const Field = ({ label, children }) => <label className="p5-field"><span>{label}</span>{children}</label>;
 const State = ({ title, children }) => <div className="p5-state"><strong>{title}</strong><p>{children}</p></div>;
-
-export function Reports({ loc, devices, auditLogs, operations, state, dispatch, actorId, now }) {
-  const [criteria, setCriteria] = useState({ template: 'health', period: 'Weekly', format: 'PDF', locationId: loc.id, user: '', from: '', to: '' });
-  const template = REPORT_TEMPLATES[criteria.template];
-  const rows = useMemo(() => {
-    if (criteria.template === 'health') return devices.filter(d => d.locationId === criteria.locationId).map(d => ({ equipmentId: d.id, description: d.description || d.name, timestamp: d.lastObservedAt || d.observedAt || 'Not supplied', status: d.status || d.connectivity, remarks: d.statusReason || 'Sample/prototype observation' }));
-    if (criteria.template === 'activation') {
-      const op = operations?.byId?.[criteria.locationId], ev = (operations?.events || []).filter(e => e.locationId === criteria.locationId);
-      return ev.length ? [{ timestamp: ev.at(-1)?.timestamp, preActivationTimestamp: ev.find(e => /activation requested/i.test(e.action))?.timestamp || 'Not recorded', activationTimestamp: ev.find(e => /activated/i.test(e.action))?.timestamp || 'Not recorded', preDeactivationTimestamp: ev.find(e => /deactivation requested/i.test(e.action))?.timestamp || 'Not recorded', deactivationTimestamp: ev.find(e => /deactivated/i.test(e.action))?.timestamp || 'Not recorded', postDeactivationTimestamp: 'Not recorded', equipmentStatus: op?.lastResult || 'Not supplied', radarVehicleVolumeAtSinglePoint: devices.find(d => d.locationId === criteria.locationId && d.type === 'AVDS')?.volume ?? 'Missing', remarks: 'Prototype event reconstruction; verify against backend event schema.' }] : [];
-    }
-    return auditLogs.filter(x => (!criteria.user || String(x.initiator || x.actor).toLowerCase().includes(criteria.user.toLowerCase())) && (criteria.period !== 'By Date' || auditInRange(x, criteria.from, criteria.to))).map(x => ({ timestamp: x.timestamp, user: x.initiator || x.actor, module: x.module, activity: x.activity, location: x.location, equipmentId: x.equipmentId, result: x.result }));
-  }, [criteria, devices, operations, auditLogs]);
-  const create = () => dispatch({ type: 'REPORT_CREATE', criteria, rows, actorId, now });
-  return <div className="p5-grid"><section className="panel p5-card"><h2>Report request</h2><p className="p5-note">Prototype job lifecycle. Inputs and rows are snapshotted when queued.</p>
-    <Field label="Template"><select value={criteria.template} onChange={e => setCriteria({ ...criteria, template: e.target.value, period: 'Weekly' })}>{Object.entries(REPORT_TEMPLATES).map(([id,t])=><option key={id} value={id}>{t.name}</option>)}</select></Field>
-    <Field label="Period"><select value={criteria.period} onChange={e=>setCriteria({...criteria,period:e.target.value})}>{template.periods.map(x=><option key={x}>{x}</option>)}</select></Field>
-    {criteria.period === 'By User' && <Field label="User contains"><input value={criteria.user} onChange={e=>setCriteria({...criteria,user:e.target.value})}/></Field>}
-    {criteria.period === 'By Date' && <><Field label="From"><input type="datetime-local" value={criteria.from} onChange={e=>setCriteria({...criteria,from:e.target.value})}/></Field><Field label="To"><input type="datetime-local" value={criteria.to} onChange={e=>setCriteria({...criteria,to:e.target.value})}/></Field></>}
-    <Field label="Requested format"><select value={criteria.format} onChange={e=>setCriteria({...criteria,format:e.target.value})}><option>PDF</option><option>Excel</option></select></Field>
-    <button className="gen-btn" onClick={create}>Queue report ({rows.length} rows)</button>{state.feedback&&<p role="status">{state.feedback}</p>}<p className="p5-note">PDF/Excel file generation requires Laravel and is unavailable in this frontend prototype.</p></section>
-    <section className="panel p5-card"><h2>Generated reports</h2>{!state.reports.length?<State title="No report jobs">Choose criteria and queue a report.</State>:state.reports.map(r=><article className="p5-record" key={r.id}><b>{r.id} Â· {REPORT_TEMPLATES[r.criteria.template].name}</b><span className={`p5-status ${r.status.toLowerCase().replace(' ','-')}`}>{r.status}</span><small>{r.criteria.period} Â· {r.rows.length} rows Â· snapshot {r.createdAt}</small>{r.error&&<p role="alert">{r.error}</p>}<div><button disabled={!['Queued','Generating'].includes(r.status)} onClick={()=>dispatch({type:'REPORT_ADVANCE',id:r.id,actorId,now})}>Advance demo status</button> <button disabled={!['Queued','Generating'].includes(r.status)} onClick={()=>dispatch({type:'REPORT_FAIL',id:r.id,actorId,now})}>Simulate failure</button> <button disabled={r.status!=='Failed'} onClick={()=>dispatch({type:'REPORT_RETRY',id:r.id,actorId,now})}>Retry</button> <button disabled={r.status!=='Ready'} onClick={()=>window.print()}>Print preview / save as PDF</button></div><details><summary>Preview snapshot</summary><pre>{JSON.stringify(r.rows.slice(0,10),null,2)}</pre></details></article>)}</section></div>;
-}
 
 export function AvdsAnalytics({ loc, devices, now }) {
   const [interval, setIntervalMinutes] = useState(5), [metric,setMetric]=useState('speed'), [deviceId,setDeviceId]=useState('all');
@@ -55,7 +34,7 @@ export function Housekeeping({ loc, state, dispatch, actorId, now, onAdmin, devi
 }
 
 export default function Phase5({ kind, ...props }) {
-  if(kind==='reports') return <Reports {...props}/>;
+  if(kind==='reports') return <ReportsMvp {...props}/>;
   if(kind==='analytics') return <AvdsAnalytics {...props}/>;
   if(kind==='maintenance') return <Maintenance {...props}/>;
   if(kind==='health') return <Maintenance {...props} healthOnly/>;

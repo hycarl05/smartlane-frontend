@@ -37,11 +37,15 @@ export function getDynamicVmsMessage(sign, phase = 0) {
   return roleMap[phaseNumber] || roleMap[0] || roleMap[5];
 }
 
-export function operationVmsMessages(location, operationType) {
+export function operationVmsMessages(location, operationType, templates = {}, devices = []) {
   const phase = operationType === 'Deactivate' ? 3 : 1;
-  return [...(location?.vms || []), ...(location?.miniVms || [])].map(sign => {
-    const message = getDynamicVmsMessage(sign, phase);
-    const identity = sign.km || sign.id || sign.type || 'VMS';
+  const configuredDevices = devices.filter(device => device.locationId === location?.id && ['VMS', 'Mini VMS'].includes(device.type));
+  const signs = configuredDevices.length ? configuredDevices : [...(location?.vms || []), ...(location?.miniVms || [])];
+  return signs.map(item => {
+    const sign = item.sign || item;
+    const saved = item.id ? templates[`${location.id}|${item.id}|${phase}`] : null;
+    const message = saved ? { msg: saved.line1, msg2: saved.line2 } : getDynamicVmsMessage(sign, phase);
+    const identity = item.km || sign.km || item.id || sign.id || sign.type || 'VMS';
     return `${identity}: ${[message.msg, message.msg2].filter(Boolean).join(' / ')}`;
   });
 }

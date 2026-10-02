@@ -1,10 +1,4 @@
-export const REPORT_TEMPLATES = {
-  health: { name: 'Smart Lane Equipment Health Report', periods: ['Weekly', 'Monthly', 'Annual'] },
-  activation: { name: 'Smart Lane Activation Report', periods: ['Weekly', 'Monthly', 'Annual'] },
-  audit: { name: 'Audit Trail', periods: ['Weekly', 'Monthly', 'Annual', 'By Date', 'By User'] },
-};
-
-export const INITIAL_PHASE5 = { reports: [], maintenance: [], archiveJobs: [], events: [], sequence: 0, feedback: null };
+export const INITIAL_PHASE5 = { maintenance: [], archiveJobs: [], events: [], sequence: 0, feedback: null };
 const copy = value => JSON.parse(JSON.stringify(value));
 const event = (state, action, activity, reference, locationId, outcome = 'Simulated') => ({
   id: `P5-EVT-${state.sequence + 1}`, timestamp: new Date(action.now).toISOString(), actor: `Demo persona ${action.actorId}`,
@@ -13,22 +7,6 @@ const event = (state, action, activity, reference, locationId, outcome = 'Simula
 });
 
 export function phase5Reducer(state, action) {
-  if (action.type === 'REPORT_CREATE') {
-    const template = REPORT_TEMPLATES[action.criteria?.template];
-    if (!template || !template.periods.includes(action.criteria.period)) return { ...state, feedback: 'Invalid report criteria.' };
-    if (!['PDF', 'Excel'].includes(action.criteria.format)) return { ...state, feedback: 'Select PDF or Excel.' };
-    if (action.criteria.period === 'By User' && !action.criteria.user?.trim()) return { ...state, feedback: 'User is required for a By User report.' };
-    if (action.criteria.period === 'By Date' && (!action.criteria.from || !action.criteria.to || new Date(action.criteria.from) > new Date(action.criteria.to))) return { ...state, feedback: 'Enter a valid From and To range for a By Date report.' };
-    const id = `RPT-${state.sequence + 1}`;
-    const row = { id, createdAt: new Date(action.now).toISOString(), actorId: action.actorId, status: action.rows?.length ? 'Queued' : 'No data', criteria: copy(action.criteria), rows: copy(action.rows || []), error: null };
-    return { ...state, sequence: state.sequence + 1, reports: [row, ...state.reports], events: [event(state, { ...action, module: 'Reports' }, `Report requested: ${template.name}; ${row.status}`, id, action.criteria.locationId), ...state.events], feedback: `${id} ${row.status.toLowerCase()}.` };
-  }
-  if (action.type === 'REPORT_ADVANCE' || action.type === 'REPORT_FAIL' || action.type === 'REPORT_RETRY') {
-    const found = state.reports.find(r => r.id === action.id); if (!found) return state;
-    const status = action.type === 'REPORT_FAIL' ? 'Failed' : action.type === 'REPORT_RETRY' ? 'Queued' : found.status === 'Queued' ? 'Generating' : found.status === 'Generating' ? 'Ready' : found.status;
-    const reports = state.reports.map(r => r.id === action.id ? { ...r, status, error: status === 'Failed' ? 'Simulated generator failure.' : null } : r);
-    return { ...state, sequence: state.sequence + 1, reports, events: [event(state, { ...action, module: 'Reports' }, `Report status changed to ${status}`, action.id, found.criteria.locationId, status), ...state.events], feedback: `${action.id}: ${status}.` };
-  }
   if (action.type === 'MAINTENANCE_SAVE') {
     const r = action.record || {}, errors = [];
     if (!r.locationId || !r.assetId || !r.remarks?.trim() || !r.actions?.trim()) errors.push('Location, asset, remarks and actions are required.');

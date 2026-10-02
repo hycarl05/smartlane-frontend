@@ -10,6 +10,9 @@ import './operations.css';
 import './scheduling.css';
 import './administration.css';
 import './phase5.css';
+import './reports.css';
+import './audit-advanced.css';
+import './vms-editor-restored.css';
 import './phase6.css';
 import './ui-cleanup.css';
 import './dashboard-compact.css';
@@ -19,7 +22,7 @@ import { initialAdministration, adminReducer, applyConfiguration, adminAudit, pr
 import { capabilities, moduleAllowed, operationActionAllowed, accessKey } from './access';
 import { AccessContext } from './accessContext';
 import { nextSchedule, displayTime, SCHEDULE_ZONE } from './scheduling';
-import { initialOperations, operationReducer, operationAudit, projectLocation } from './operations';
+import { initialDemoOperations, operationReducer, operationAudit, projectLocation } from './operations';
 import { operationVmsMessages } from './vmsMessages';
 import { LOCATION_NAVIGATION, locationPath, resolveRoute } from './routing';
 
@@ -81,7 +84,7 @@ export default function App() {
     return true;
   };
   const choosePersona = id => { setPersonaId(id); setAccessNotice('Demo access context changed. Open dialogs and unsaved entries were closed; pending operations are retained.'); };
-  const [operations, dispatchOperation] = useReducer(operationReducer, INITIAL_LOCATIONS, initialOperations);
+  const [operations, dispatchOperation] = useReducer(operationReducer, INITIAL_LOCATIONS, initialDemoOperations);
   const [phase5, dispatchPhase5] = useReducer(phase5Reducer, INITIAL_PHASE5);
   const [phase6, dispatchPhase6] = useReducer(phase6Reducer, INITIAL_PHASE6);
   const locations = useMemo(() => inventory.map(loc => {
@@ -94,7 +97,7 @@ export default function App() {
     const operationType = action.type === 'SCHEDULE_SIMULATE' ? 'Activate' : action.kind;
     const needsVmsSnapshot = action.type === 'SCHEDULE_SIMULATE' || (action.type === 'REQUEST' && ['Activate', 'Deactivate'].includes(action.kind));
     const location = needsVmsSnapshot ? inventory.find(item => item.id === action.locationId) : null;
-    dispatchOperation({ ...action, ...(location ? { vmsMessages: operationVmsMessages(location, operationType) } : {}), now: Date.now(), actor: `Demo persona ${persona.id}` });
+    dispatchOperation({ ...action, ...(location ? { vmsMessages: operationVmsMessages(location, operationType, phase6.templates, equipmentRecords) } : {}), now: Date.now(), actor: `Demo persona ${persona.id}` });
     return true;
   };
   const [legacyAuditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);

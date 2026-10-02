@@ -11,7 +11,7 @@ export const DEMO_OPERATION_POLICY = Object.freeze({
   extensionMinutes: [15, 20, 30, 60],
 });
 export const PHASE_NAMES = ['Standby / not operating', 'Phase 1: Pre Activation',
-  'Phase 2: Activation', 'Phase 3: Pre Deactivation', 'Phase 4: Deactivation', 'Phase 5: Post Activation'];
+  'Phase 2: Activation / Operating', 'Phase 3: Pre Deactivation', 'Phase 4: Deactivation', 'Phase 5: Post Activation'];
 export const INTERVENTION_REASONS = [
   'Breakdown or accident obstructing Smartlane operation',
   'Breakdown or accident not obstructing Smartlane operation',

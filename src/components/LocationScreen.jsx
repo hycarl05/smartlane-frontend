@@ -11,10 +11,11 @@ import { getDynamicVmsMessage } from '../vmsMessages';
 import AuditLogDisplay from './AuditLogDisplay';
 import RoadLayoutDesigner from './RoadLayoutDesigner';
 import Phase5 from './Phase5';
-import { EquipmentGIS, EquipmentSchematic, VmsWorkflow } from './Phase6';
+import { EquipmentGIS, EquipmentSchematic } from './Phase6';
+import VmsWorkflowEditor from './VmsWorkflowEditor';
 import DashboardOverview from './DashboardOverview';
 import { Link, NavLink } from 'react-router-dom';
-import { LOCATION_NAVIGATION, locationPath } from '../routing';
+import { LOCATION_NAVIGATION, locationPath, shouldShowOperationControls } from '../routing';
 
 export default function LocationScreen({
   loc,
@@ -115,12 +116,13 @@ export default function LocationScreen({
         </>
       )}
 
-      <div className="tab-panels">{!caps.operate && <p className="equipment-notice">Read-only operation status: {loc.phaseLabel} · {operation?.mode} · {operation?.intervention ? 'Intervention active' : operation?.pendingDecision ? 'Awaiting operator decision' : operation?.command.status}. Controls are unavailable for this demo persona.</p>}{caps.operate && !['schedule', 'exceptions', 'settings', 'groups', 'users', 'reports', 'analytics', 'maintenance', 'health', 'housekeeping'].includes(activeTab) && <OperationControls key={loc.id} loc={loc} op={operation} now={operationNow} dispatch={onOperation} />}
+      <div className="tab-panels">{shouldShowOperationControls(activeTab) && !caps.operate && <p className="equipment-notice">Read-only operation status: {loc.phaseLabel} · {operation?.mode} · {operation?.intervention ? 'Intervention active' : operation?.pendingDecision ? 'Awaiting operator decision' : operation?.command.status}. Controls are unavailable for this demo persona.</p>}{shouldShowOperationControls(activeTab) && caps.operate && <OperationControls key={loc.id} loc={loc} op={operation} now={operationNow} dispatch={onOperation} />}
         {/* OVERVIEW / CORRIDOR TAB */}
         {isOverviewOrCorridor && <DashboardOverview
           loc={loc}
           devices={devices}
           operation={operation}
+          vmsTemplates={phase6.templates}
           auditLogs={auditLogs}
           canReadVms={caps.vmsRead}
           onSelectDevice={setSelectedDeviceId}
@@ -316,7 +318,7 @@ export default function LocationScreen({
         {activeTab === 'schematic' && <EquipmentSchematic loc={loc} devices={equipmentRecords} />}
         {/* VMS CONTROL & EDITOR TAB */}
         {activeTab === 'vms' && (
-          <VmsWorkflow loc={loc} devices={equipmentRecords} state={phase6} dispatch={onPhase6} editable={caps.vmsEdit} initialModule={vmsModuleType === 'miniVms' ? 'Mini VMS' : 'VMS'} />
+          <VmsWorkflowEditor loc={loc} devices={equipmentRecords} state={phase6} dispatch={onPhase6} editable={caps.vmsEdit} initialModule={vmsModuleType === 'miniVms' ? 'Mini VMS' : 'VMS'} />
         )}
 
         {/* ROAD LAYOUT DESIGNER TAB */}
@@ -342,7 +344,6 @@ export default function LocationScreen({
         {activeTab === 'log' && (
           <div className="tab-panel active equipment-log-page">
             <EquipmentAlarms records={devices} onDetails={setSelectedDeviceId} />
-            <h2>Historical audit records</h2>
             <AuditLogDisplay
               auditLogs={auditLogs}
               locations={locations}

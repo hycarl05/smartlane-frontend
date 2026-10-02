@@ -20,6 +20,7 @@ export const LOCATION_NAVIGATION = [
 
 export const navigationForKey = key => LOCATION_NAVIGATION.find(item => item.key === key) || LOCATION_NAVIGATION[0];
 export const navigationForPath = path => LOCATION_NAVIGATION.find(item => item.path === path) || null;
+export const shouldShowOperationControls = tab => tab === 'overview';
 export const locationPath = (locationId, key = 'overview') => `/locations/${encodeURIComponent(locationId)}/${navigationForKey(key).path}`;
 
 export function resolveRoute(pathname, locationIds = []) {

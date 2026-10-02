@@ -2,16 +2,16 @@ import React from 'react';
 import Topbar from './Topbar';
 import { fmtElapsed } from '../data';
 import { equipmentAlarms } from '../equipment';
-import { canDeactivate } from '../operations';
 import { capabilities } from '../access';
 import { useAccess } from '../accessContext';
+import { activeLocationCount, isLocationOperating, locationActionState, locationCardClass } from '../overviewState';
 
 export default function OverviewScreen({
   locations = [], equipmentRecords = [], operationNow, onQuickOperation,
   onSelectLocation, time, date, user, onLogout
 }) {
   const { persona } = useAccess();
-  const activeCount = locations.filter(l => !l.operation?.intervention && [2, 3].includes(l.phase)).length;
+  const activeCount = activeLocationCount(locations);
   const pendingCount = locations.filter(l => l.status === 'pending').length;
   const alarms = equipmentAlarms(equipmentRecords).map(a => ({
     ...a, sev: a.severity === 'Major' ? 'critical' : 'warning',
@@ -58,11 +58,12 @@ export default function OverviewScreen({
       <section className="loc-list" aria-label="Smartlane locations">
         {locations.map(loc => {
           const alarmCount = alarms.filter(a => a.locationId === loc.id).length;
-          const isActive = !loc.operation?.intervention && [2, 3].includes(loc.phase);
+          const isActive = isLocationOperating(loc);
           const isPending = loc.status === 'pending';
           const canOperate = capabilities(persona, loc.id).operate;
+          const actions = locationActionState(loc, operationNow, canOperate);
           const nextSchedule = loc.scheduleSummary?.next ? loc.nextRun : 'No upcoming schedule';
-          return <article key={loc.id} className={`loc-row is-${loc.status}`}>
+          return <article key={loc.id} className={locationCardClass(loc)} aria-label={`${loc.name}, Smartlane ${isActive ? 'active' : 'inactive'}`}>
             <div className="loc-row-id">
               <h3 className="nm">{loc.name}</h3>
               <p className="dr">{loc.direction || 'Northbound'}</p>
@@ -97,8 +98,8 @@ export default function OverviewScreen({
 
             <div className="loc-row-action">
               <div className="quick-operation">
-                <button className="overview-action secondary" disabled={!canOperate || !loc.operation || ![0, 5].includes(loc.operation.phase) || !!loc.operation.pendingDecision} onClick={() => onQuickOperation(loc.id, 'Activate')}>Request activation</button>
-                <button className="overview-action danger" disabled={!canOperate || !loc.operation || !canDeactivate(loc.operation, operationNow) || !!loc.operation.pendingDecision} onClick={() => onQuickOperation(loc.id, 'Deactivate')}>Request deactivation</button>
+                <button className="overview-action secondary" disabled={actions.activationDisabled} onClick={() => onQuickOperation(loc.id, 'Activate')}>Request activation</button>
+                <button className="overview-action danger" disabled={actions.deactivationDisabled} onClick={() => onQuickOperation(loc.id, 'Deactivate')}>Request deactivation</button>
               </div>
               <button className="open-btn" onClick={() => open(loc.id)}>Open Dashboard →</button>
             </div>

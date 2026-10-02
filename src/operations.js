@@ -2,15 +2,33 @@ import { DEMO_OPERATION_POLICY as P, PHASE_NAMES, INTERVENTION_REASONS } from '.
 import { createScheduleStore, changeSchedules, occurrences, simulationEligibility } from './scheduling.js';
 
 const ACKNOWLEDGEMENT_OPERATIONS = new Set(['Activate', 'Deactivate']);
+export const DEMO_ACTIVE_LOCATION_ID = 'pms';
+export const PRE_ACTIVATION_DELAY_OPTIONS = [5, 10, 30];
 
 export function emptyOperation(locationId) {
   return { locationId, operationId: null, mode: 'Manual', phase: 0, pendingDecision: null,
-    intervention: null, warningDeadline: null, plannedEnd: null, startedAt: null,
+    intervention: null, warningDeadline: null, phaseTransitionAt: null, transitionOperationId: null, transitionFromPhase: null,
+    preActivationDelaySeconds: PRE_ACTIVATION_DELAY_OPTIONS[0], preDeactivationDelaySeconds: PRE_ACTIVATION_DELAY_OPTIONS[0], plannedEnd: null, startedAt: null,
     nextDecisionAt: null, notification: null, command: { status: 'Idle' },
     warningMs: P.warningMs, lastResult: 'Demo session starts in standby; no live operation restored.' };
 }
 export function initialOperations(locations, now = Date.now()) {
   return { now, offset: 0, sequence: 0, events: [], scheduleStore: createScheduleStore(locations), byId: Object.fromEntries(locations.map(l => [l.id, emptyOperation(l.id)])) };
+}
+export function initialDemoOperations(locations, now = Date.now()) {
+  const state = initialOperations(locations, now);
+  if (!state.byId[DEMO_ACTIVE_LOCATION_ID]) return state;
+  state.byId[DEMO_ACTIVE_LOCATION_ID] = {
+    ...state.byId[DEMO_ACTIVE_LOCATION_ID],
+    operationId: `DEMO-${DEMO_ACTIVE_LOCATION_ID}-SEEDED`,
+    mode: 'Manual',
+    phase: 2,
+    startedAt: now,
+    nextDecisionAt: now + P.recurringDecisionMs,
+    command: { status: 'Simulated success', completedAt: now },
+    lastResult: 'Seeded active state for the frontend demonstration; no live equipment response was received.',
+  };
+  return state;
 }
 export function canDeactivate(op, now) {
   return op.phase === 2 && (op.mode !== 'Automated' || now >= op.startedAt + P.automatedMinimumMs);
@@ -47,6 +65,32 @@ export function operationReducer(state, action) {
       });
       op.pendingDecision = null; op.command = { status: 'Expired' };
       op.lastResult = 'Acknowledgement expired; no transition started (simulation).';
+    }
+    if (op.phaseTransitionAt && now >= op.phaseTransitionAt) {
+      if ([1, 3].includes(op.phase) && op.phase === op.transitionFromPhase && op.operationId === op.transitionOperationId) {
+        const previous = op.phase;
+        const completedAt = op.phaseTransitionAt;
+        op.phase = previous === 1 ? 2 : 4;
+        if (op.phase === 2) {
+          op.startedAt = completedAt;
+          op.plannedEnd = op.mode === 'Manual' ? null : completedAt + op.durationMinutes * 60_000;
+          op.nextDecisionAt = completedAt + (op.mode === 'Automated' ? P.automatedMinimumMs : P.recurringDecisionMs);
+        } else {
+          op.endedAt = completedAt;
+          op.postAt = completedAt + P.postActivationMs;
+          op.notification = null;
+          op.intervention = null;
+          op.nextDecisionAt = null;
+        }
+        op.command = { status: 'Simulated success', completedAt };
+        op.lastResult = previous === 1
+          ? 'Phase 1 completed. Phase 2: Activation / Operating started in simulation.'
+          : 'Phase 3 completed. Phase 4: Deactivation started in simulation.';
+        emit(op, 'Transition', op.lastResult, previous, { demoDelaySeconds: previous === 1 ? op.preActivationDelaySeconds : op.preDeactivationDelaySeconds });
+      }
+      op.phaseTransitionAt = null;
+      op.transitionOperationId = null;
+      op.transitionFromPhase = null;
     }
     if (op.warningDeadline && now >= op.warningDeadline) {
       op.command = { status: 'Transition pending', dueAt: op.warningDeadline + P.transitionMs };
@@ -108,7 +152,11 @@ export function operationReducer(state, action) {
   if (!op) return next;
   op = { ...op };
   const idle = [0, 5].includes(op.phase) && !op.pendingDecision;
-  if (action.type === 'MODE' && idle && ['Manual', 'Scheduled', 'Automated'].includes(action.mode)) {
+  if (action.type === 'SET_PRE_ACTIVATION_DELAY' && idle && PRE_ACTIVATION_DELAY_OPTIONS.includes(action.seconds)) {
+    op.preActivationDelaySeconds = action.seconds;
+  } else if (action.type === 'SET_PRE_DEACTIVATION_DELAY' && op.phase === 2 && !op.pendingDecision && !op.intervention && PRE_ACTIVATION_DELAY_OPTIONS.includes(action.seconds)) {
+    op.preDeactivationDelaySeconds = action.seconds;
+  } else if (action.type === 'MODE' && idle && ['Manual', 'Scheduled', 'Automated'].includes(action.mode)) {
     op.mode = action.mode; emit(op, 'Mode', action.mode);
   } else if (action.type === 'WARNING' && idle && [1, 3, 5].includes(action.minutes)) {
     op.warningMs = action.minutes * 60_000; emit(op, 'Demo warning policy', `${action.minutes} minutes; unapproved`);
@@ -126,6 +174,8 @@ export function operationReducer(state, action) {
     const id = emit(op, kind, 'Alert displayed; awaiting operator acknowledgement', op.phase, { applicableVmsMessages: vmsMessages, outcome: 'Pending' });
     op.pendingDecision = { id, kind, requestedAt: now, durationMinutes: action.durationMinutes,
       requiresAcknowledgement, vmsMessages,
+      preActivationDelaySeconds: kind === 'Activate' ? op.preActivationDelaySeconds : null,
+      preDeactivationDelaySeconds: kind === 'Deactivate' ? op.preDeactivationDelaySeconds : null,
       expiresAt: now + P.acknowledgementMs };
     op.command = { status: 'Awaiting acknowledgement' };
   } else if (action.type === 'CANCEL' && op.pendingDecision?.id === action.requestId) {
@@ -146,13 +196,16 @@ export function operationReducer(state, action) {
       op.durationMinutes = pending.kind === 'Activate' ? pending.durationMinutes : op.durationMinutes;
       op.warningDeadline = null;
       op.notification = null;
-      op.lastResult = `${pending.kind} acknowledged; configured warning retained but bypassed by design simulation.`;
+      op.lastResult = pending.kind === 'Activate'
+        ? `Activation acknowledged. Phase 1: Pre Activation started. Demo delay: ${pending.preActivationDelaySeconds} seconds.`
+        : `Deactivation acknowledged. Phase 3: Pre Deactivation started. Demo delay: ${pending.preDeactivationDelaySeconds} seconds.`;
     }
     const selectedVmsMessages = pending.vmsMessages;
     emit(op, pending.kind, pending.requiresAcknowledgement ? 'Acknowledged and proceeded' : 'Decision confirmed', previous, {
       acknowledgement: pending.requiresAcknowledgement ? 'Acknowledged' : 'Not required',
       selectedVmsMessages,
       extensionMinutes: null,
+      demoDelaySeconds: pending.kind === 'Activate' ? pending.preActivationDelaySeconds : pending.preDeactivationDelaySeconds,
     });
     op.pendingDecision = null;
     if (action.simulationResult === 'Failed') {
@@ -160,26 +213,15 @@ export function operationReducer(state, action) {
       op.lastResult = `${pending.kind} simulated device transition failed; operation state was not reported as completed.`;
       emit(op, 'Transition', op.lastResult, op.phase, { outcome: 'Failed' });
     } else if (pending.kind === 'Activate') {
-      const prePhase = op.phase;
-      op.phase = 2;
-      op.startedAt = now;
-      op.plannedEnd = op.mode === 'Manual' ? null : now + op.durationMinutes * 60_000;
-      op.nextDecisionAt = now + (op.mode === 'Automated' ? P.automatedMinimumMs : P.recurringDecisionMs);
-      op.command = { status: 'Simulated success', completedAt: now };
-      op.lastResult = 'Activation completed immediately in design simulation; no live equipment response was received.';
-      emit(op, 'Transition', op.lastResult, prePhase);
+      op.phaseTransitionAt = now + pending.preActivationDelaySeconds * 1000;
+      op.transitionOperationId = op.operationId;
+      op.transitionFromPhase = 1;
+      op.command = { status: 'Pre-activation delay', dueAt: op.phaseTransitionAt };
     } else if (pending.kind === 'Deactivate') {
-      const prePhase = op.phase;
-      op.phase = 4;
-      op.endedAt = now;
-      op.notification = null; op.intervention = null; op.nextDecisionAt = null;
-      op.command = { status: 'Simulated success', completedAt: now };
-      op.lastResult = 'Deactivation completed immediately in design simulation; no live equipment response was received.';
-      emit(op, 'Transition', op.lastResult, prePhase);
-      op.phase = 5;
-      op.postAt = now;
-      op.lastResult = 'Post-operation state reached immediately in design simulation.';
-      emit(op, 'Transition', op.lastResult, 4);
+      op.phaseTransitionAt = now + pending.preDeactivationDelaySeconds * 1000;
+      op.transitionOperationId = op.operationId;
+      op.transitionFromPhase = 3;
+      op.command = { status: 'Pre-deactivation delay', dueAt: op.phaseTransitionAt };
     }
   } else if (action.type === 'INTERVENE' && op.phase === 2 && !op.intervention && !op.pendingDecision && INTERVENTION_REASONS.includes(action.reason)) {
     op.intervention = { reason: action.reason, startedAt: now, remindAt: now + P.interventionReminderMs };
@@ -233,6 +275,7 @@ export function operationAudit(events, locations) {
       (e.interventionReason ? `; Reason: ${e.interventionReason}` : '') +
       (e.occurrenceId ? `; Schedule occurrence: ${e.occurrenceId}` : '') +
       (e.extensionMinutes ? `; Extension: ${e.extensionMinutes} min` : '') +
+      (e.demoDelaySeconds ? `; Demo delay: ${e.demoDelaySeconds} seconds` : '') +
       (e.acknowledgement ? `; Acknowledgement: ${e.acknowledgement}` : '') +
       (e.selectedVmsMessages?.length ? `; VMS: ${e.selectedVmsMessages.join(' | ')}` : ''),
   }));

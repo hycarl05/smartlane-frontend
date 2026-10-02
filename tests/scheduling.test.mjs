@@ -121,6 +121,7 @@ test('schedule simulation routes through Phase 2 acknowledgement, preserves timi
   dispatch(action);
   assert.equal(state.events.length, count);
   dispatch({ type: 'CONFIRM', requestId });
+  dispatch({ type: 'TICK', now: state.byId.a.phaseTransitionAt });
   assert.equal(state.byId.a.phase, 2);
   assert.equal(state.byId.a.warningDeadline, null);
   assert.ok(state.events.some(e => e.occurrenceId === occurrenceId));
