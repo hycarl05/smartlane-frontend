@@ -354,7 +354,7 @@ export default function LocationScreen({
           </div>
         )}
 
-        {['reports','analytics','maintenance','health','housekeeping'].includes(activeTab) && <div className="tab-panel active"><Phase5 kind={activeTab} loc={loc} devices={equipmentRecords} auditLogs={auditLogs} operations={operations} state={phase5} dispatch={onPhase5} onAdmin={onAdmin} actorId={user?.username || 'demo'} now={operationNow} editable={caps.maintenanceEdit} /></div>}
+        {['reports','analytics','maintenance','health'].includes(activeTab) && <div className="tab-panel active"><Phase5 kind={activeTab} loc={loc} devices={equipmentRecords} auditLogs={auditLogs} operations={operations} state={phase5} dispatch={onPhase5} onAdmin={onAdmin} actorId={user?.username || 'demo'} now={operationNow} editable={caps.maintenanceEdit} /></div>}
 
         {/* SETTINGS TAB */}
         {['settings', 'groups', 'users'].includes(activeTab) && caps.configure && <Administration key={`${loc.id}:${activeTab}`} kind={activeTab} loc={loc} locations={administrationLocations} devices={equipmentRecords} state={administration} dispatch={onAdmin} />}

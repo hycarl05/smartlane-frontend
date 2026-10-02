@@ -10,7 +10,6 @@ export const LOCATION_NAVIGATION = [
   { key: 'analytics', label: 'AVDS Analytics', path: 'avds-analytics', permission: 'analytics' },
   { key: 'maintenance', label: 'Maintenance', path: 'maintenance', permission: 'maintenance' },
   { key: 'health', label: 'System Health', path: 'system-health', permission: 'health' },
-  { key: 'housekeeping', label: 'Housekeeping', path: 'housekeeping', permission: 'housekeeping' },
   { key: 'settings', label: 'Equipment Configuration', path: 'equipment-configuration', permission: 'settings' },
   { key: 'designer', label: 'Road Studio', path: 'road-studio', permission: 'designer' },
   { key: 'vms', label: 'VMS Editor', path: 'vms-editor', permission: 'vms' },
