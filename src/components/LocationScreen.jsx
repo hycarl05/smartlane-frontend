@@ -360,7 +360,7 @@ export default function LocationScreen({
         {['settings', 'groups', 'users'].includes(activeTab) && caps.configure && <Administration key={`${loc.id}:${activeTab}`} kind={activeTab} loc={loc} locations={administrationLocations} devices={equipmentRecords} state={administration} dispatch={onAdmin} />}
       </div>
 
-      {selectedDevice && <DeviceDetails key={selectedDevice.id} device={selectedDevice} onClose={closeDevice} />}
+      {selectedDevice && <DeviceDetails key={selectedDevice.id} device={selectedDevice} locationId={loc.id} phase={operation?.phase || 0} templates={phase6.templates} editable={caps.vmsEdit} onSaveTemplate={onPhase6} onClose={closeDevice} />}
 
     </div>
   );

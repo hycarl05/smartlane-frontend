@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { OPERATION_PHASES, PANEL_CAPABILITIES, validateVmsDraft } from '../phase6';
 import { draftsForVmsDevices, normalizedVmsRole, operationalMiniVmsDevices, updateDeviceDraft, vmsTemplateSaveActions } from '../vmsEditorModel';
+import VmsBoardPreview from './VmsBoardPreview';
 
 const PHASE_LABELS = { 1: 'Pre Activation', 2: 'Activation', 3: 'Pre Deactivation', 4: 'Deactivation', 5: 'Post Activation' };
 const roleLabel = role => ({ 'Start/entry': 'Start / Entry', 'Final/exit': 'End / Exit' })[role] || role;
@@ -12,10 +13,7 @@ function DeviceEditor({ device, draft, phase, editable, onChange }) {
       <div><strong>{device.demoLabel || device.name}</strong><small>{device.id} · {device.km}</small></div>
       <div className="vms-device-meta"><span>{roleLabel(role)}</span><small><i className={`vms-health-dot ${String(device.health).toLowerCase()}`} />{device.connectivity === 'Active' ? 'Online' : device.connectivity} · {device.health}</small></div>
     </header>
-    <div className="vms-preview-board" aria-label={`${device.demoLabel || device.name} live preview`}>
-      <div data-testid={`${device.id}-line-1`}>{draft.line1 || 'LINE 1'}</div>
-      <div data-testid={`${device.id}-line-2`}>{draft.line2 || 'LINE 2'}{role === 'Final/exit' && draft.remainingDistanceMeters ? ` · ${draft.remainingDistanceMeters}M` : ''}</div>
-    </div>
+    <VmsBoardPreview line1={draft.line1} line2={`${draft.line2 || ''}${role === 'Final/exit' && draft.remainingDistanceMeters ? ` · ${draft.remainingDistanceMeters}M` : ''}`} label={`${device.demoLabel || device.name} live preview`} />
     <div className="vms-device-fields">
       <label>Message Line 1<input disabled={!editable} value={draft.line1} placeholder="Enter first message line" onChange={event => onChange('line1', event.target.value)} /></label>
       <label>Message Line 2<input disabled={!editable} value={draft.line2} placeholder="Enter second message line" onChange={event => onChange('line2', event.target.value)} /></label>

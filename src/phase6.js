@@ -47,7 +47,8 @@ export function validateVmsDraft(draft, capability = {}) {
 const copy = value => JSON.parse(JSON.stringify(value));
 export function phase6Reducer(state, action) {
   if (action.type === 'VMS_TEMPLATE_SAVE') {
-    const errors = validateVmsDraft(action.draft, PANEL_CAPABILITIES[action.deviceType] || {});
+    const validationDraft = action.messageOnly ? { ...action.draft, role: 'Intermediate' } : action.draft;
+    const errors = validateVmsDraft(validationDraft, PANEL_CAPABILITIES[action.deviceType] || {});
     if (errors.length) return { ...state, feedback: { errors, message: '' } };
     const key = `${action.locationId}|${action.deviceId}|${action.phase}`;
     const template = { ...copy(action.draft), locationId: action.locationId, deviceId: action.deviceId, phase: action.phase, savedAt: new Date(action.now).toISOString(), actorId: action.actorId, approval: 'Prototype example; operational text not approved' };

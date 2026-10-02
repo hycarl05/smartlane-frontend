@@ -2,7 +2,7 @@ import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAccess } from '../accessContext';
 
-export default function MonitoringDialog({ title, onClose, children }) {
+export default function MonitoringDialog({ title, onClose, children, hideAccessTest = false, className = '' }) {
   const access = useAccess();
   const ref = useRef(null);
   const closeRef = useRef(onClose);
@@ -26,11 +26,11 @@ export default function MonitoringDialog({ title, onClose, children }) {
     return () => { dialog.removeEventListener('keydown', handleKey); if (previous?.isConnected) previous.focus(); };
   }, []);
   return createPortal(<div className="monitoring-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="monitoring-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={ref}>
+    <section className={`monitoring-dialog ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={titleId} ref={ref}>
       <header><h2 id={titleId}>{title}</h2><button type="button" onClick={onClose} aria-label="Close dialog">✕</button></header>
       {children}
       {access.notice && <p role="status">{access.notice}</p>}
-      {access.persona && <details className="access-dialog-test"><summary>Demo access-change test</summary><p>Switch to the read-only observer preview. This closes dialogs, discards unsaved entries and blocks submission under the old context; shared operations remain intact.</p><button type="button" onClick={access.revoke}>Simulate access change now</button></details>}
+      {!hideAccessTest && access.persona && <details className="access-dialog-test"><summary>Demo access-change test</summary><p>Switch to the read-only observer preview. This closes dialogs, discards unsaved entries and blocks submission under the old context; shared operations remain intact.</p><button type="button" onClick={access.revoke}>Simulate access change now</button></details>}
     </section>
   </div>, document.body);
 }
